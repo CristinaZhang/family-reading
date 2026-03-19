@@ -1,0 +1,30 @@
+<view class="card">
+  <view class="row" style="justify-content: space-between;">
+    <view>
+      <view>当前家庭：{{family ? family.name : "未创建"}}</view>
+      <view class="muted">成员数：{{members.length}}</view>
+    </view>
+    <button size="mini" bindtap="logout">退出</button>
+  </view>
+</view>
+
+<view class="card">
+  <view>快速入口</view>
+  <button class="btn" type="primary" bindtap="goScan">扫一扫添加阅读</button>
+  <button class="btn" bindtap="goReadingList">阅读列表</button>
+</view>
+
+<view class="card">
+  <view class="row" style="justify-content: space-between;">
+    <view>看板</view>
+    <button size="mini" bindtap="refresh">刷新</button>
+  </view>
+  <view wx:if="{{dash && dash.members && dash.members.length}}">
+    <view wx:for="{{dash.members}}" wx:key="member_id" style="margin-top:10px;">
+      <view><text style="font-weight:600;">{{item.display_name}}</text></view>
+      <view class="muted">想读 {{item.wishlist}} · 在读 {{item.reading}} · 读完 {{item.finished}} · 搁置 {{item.paused}}</view>
+    </view>
+  </view>
+  <view wx:else class="muted" style="margin-top:10px;">暂无数据（先创建家庭与成员）</view>
+</view>
+
