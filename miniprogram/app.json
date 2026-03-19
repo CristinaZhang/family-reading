@@ -1,0 +1,16 @@
+{
+  "pages": [
+    "pages/login/index",
+    "pages/home/index",
+    "pages/scan_add/index",
+    "pages/reading_list/index",
+    "pages/reading_detail/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "家庭阅读记录",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f6f7fb"
+  }
+}
+

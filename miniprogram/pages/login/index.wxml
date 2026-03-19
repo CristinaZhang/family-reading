@@ -1,0 +1,9 @@
+<view class="card">
+  <view>开发态登录</view>
+  <view class="muted">后端默认开启 /v1/auth/dev/login（openid 仅用于区分用户）。</view>
+
+  <view style="height: 12px;"></view>
+  <input placeholder="请输入 openid（例如 dev-user-1）" value="{{openid}}" bindinput="onInput" />
+  <button class="btn" type="primary" bindtap="login">登录</button>
+</view>
+

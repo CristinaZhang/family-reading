@@ -1,0 +1,29 @@
+page {
+  background: #f6f7fb;
+  color: #111827;
+  font-size: 16px;
+}
+
+.card {
+  margin: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn {
+  margin-top: 10px;
+}
+
+.muted {
+  color: #6b7280;
+  font-size: 14px;
+}
+
