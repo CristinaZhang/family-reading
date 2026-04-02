@@ -1,0 +1,67 @@
+# 虚拟环境
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Python字节码
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# 日志文件
+*.log
+logs/
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE和编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 构建和分发文件
+build/
+dist/
+*.egg-info/
+*.egg
+
+# 测试覆盖率报告
+htmlcov/
+.coverage
+.coverage.*
+
+# 临时文件
+*.tmp
+*.temp
+.cache/
+
+# 其他
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.tox/
+.venv/
+
+# 特定于项目的忽略项
+static/
