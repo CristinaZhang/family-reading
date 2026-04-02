@@ -1,0 +1,13 @@
+# 核心依赖
+fastapi[all]
+uvicorn[standard]
+sqlmodel
+pydantic-settings
+
+# 测试依赖
+pytest
+httpx
+pytest-cov
+
+# 其他依赖
+python-dotenv
