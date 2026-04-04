@@ -1,0 +1,35 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="error">
+    <text>加载失败，请重试</text>
+    <button bindtap="refresh">重新加载</button>
+  </view>
+
+  <view wx:else class="list">
+    <view
+      wx:for="{{readingList}}"
+      wx:key="id"
+      class="item"
+      bindtap="goToDetail"
+      data-id="{{item.id}}"
+    >
+      <image class="cover" src="{{item.book.cover}}" mode="aspectFit" />
+      <view class="info">
+        <text class="title">{{item.book.title}}</text>
+        <text class="author">{{item.book.author}}</text>
+        <view class="status-container">
+          <text class="status {{item.status}}">{{item.status === 'reading' ? '阅读中' : item.status === 'finished' ? '已完成' : '其他'}}</text>
+          <text class="progress">{{item.progress}}%</text>
+        </view>
+        <text class="date">{{item.updatedAt}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{readingList.length === 0}}" class="empty">
+      <text>暂无阅读记录</text>
+    </view>
+  </view>
+</view>

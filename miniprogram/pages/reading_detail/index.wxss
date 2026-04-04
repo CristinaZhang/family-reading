@@ -1,0 +1,145 @@
+.container {
+  min-height: 100vh;
+  background-color: #f6f7fb;
+}
+
+.loading, .error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40rpx;
+}
+
+.error button {
+  margin-top: 20rpx;
+  width: 200rpx;
+}
+
+.content {
+  padding: 20rpx;
+}
+
+.book-info {
+  display: flex;
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.cover {
+  width: 140rpx;
+  height: 200rpx;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  background-color: #f0f0f0;
+}
+
+.info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 8rpx;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.author {
+  font-size: 24rpx;
+  color: #666666;
+  margin-bottom: 8rpx;
+}
+
+.isbn, .pages {
+  font-size: 20rpx;
+  color: #999999;
+  margin-bottom: 4rpx;
+}
+
+.status-section, .progress-section, .note-section {
+  background-color: #ffffff;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333333;
+  margin-bottom: 16rpx;
+  padding-bottom: 12rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.status-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.status {
+  padding: 8rpx 16rpx;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  align-self: flex-start;
+  margin-bottom: 12rpx;
+}
+
+.status.reading {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.status.finished {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.date {
+  font-size: 22rpx;
+  color: #666666;
+  margin-bottom: 8rpx;
+}
+
+.progress-container {
+  margin-bottom: 20rpx;
+}
+
+.progress-text {
+  font-size: 24rpx;
+  color: #333333;
+  margin-bottom: 12rpx;
+  text-align: center;
+}
+
+.save-btn {
+  width: 100%;
+  height: 80rpx;
+  font-size: 28rpx;
+  background-color: #1989fa;
+  color: #ffffff;
+  border-radius: 8rpx;
+}
+
+.note {
+  min-height: 120rpx;
+  padding: 16rpx;
+  background-color: #f5f5f5;
+  border-radius: 8rpx;
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 1.5;
+}
