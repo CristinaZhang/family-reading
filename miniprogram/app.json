@@ -11,6 +11,25 @@
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#f6f7fb"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1989fa",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/reading_list/index",
+        "text": "阅读记录"
+      },
+      {
+        "pagePath": "pages/scan_add/index",
+        "text": "添加书籍"
+      }
+    ]
   }
 }
-

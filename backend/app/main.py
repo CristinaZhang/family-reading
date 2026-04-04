@@ -16,9 +16,24 @@ def create_app() -> FastAPI:
         version="0.1.0",
         docs_url=None,  # 禁用默认的docs
         redoc_url=None,  # 禁用默认的redoc
-        openapi_url="/openapi.json",
-        openapi_version="3.0.2"  # 明确指定OpenAPI版本
+        openapi_url="/openapi.json"
     )
+
+    # 保存原始的 openapi 方法
+    original_openapi = app.openapi
+
+    # 自定义 OpenAPI 规范，添加版本字段
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        # 调用原始的 openapi 方法
+        openapi_schema = original_openapi()
+        # 确保添加正确的 OpenAPI 版本
+        openapi_schema["openapi"] = "3.0.2"
+        app.openapi_schema = openapi_schema
+        return app.openapi_schema
+
+    app.openapi = custom_openapi
 
     # 挂载静态文件目录
     app.mount("/static", StaticFiles(directory="static"), name="static")

@@ -1,0 +1,12 @@
+<view class="container">
+  <view class="content">
+    <image class="scan-icon" src="/images/scan.png" />
+    <text class="title">扫码添加书籍</text>
+    <text class="hint">正在启动扫码...</text>
+    <view class="isbn-display" wx:if="{{isbn}}">
+      <text class="label">ISBN:</text>
+      <text class="isbn">{{isbn}}</text>
+    </view>
+    <button class="rescan-btn" bindtap="scanISBN">重新扫码</button>
+  </view>
+</view>

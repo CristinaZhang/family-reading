@@ -1,0 +1,54 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="error">
+    <text>加载失败，请重试</text>
+    <button bindtap="refresh">重新加载</button>
+  </view>
+
+  <view wx:else class="content">
+    <view class="book-info">
+      <image class="cover" src="{{reading.book.cover}}" mode="aspectFit" />
+      <view class="info">
+        <text class="title">{{reading.book.title}}</text>
+        <text class="author">{{reading.book.author}}</text>
+        <text class="isbn">ISBN: {{reading.book.isbn}}</text>
+        <text class="pages">总页数: {{reading.book.pages}}</text>
+      </view>
+    </view>
+
+    <view class="status-section">
+      <text class="section-title">阅读状态</text>
+      <view class="status-info">
+        <text class="status {{reading.status}}">{{reading.status === 'reading' ? '阅读中' : reading.status === 'finished' ? '已完成' : '其他'}}</text>
+        <text class="date">开始日期: {{reading.startDate}}</text>
+        <text class="date">更新日期: {{reading.updatedAt}}</text>
+      </view>
+    </view>
+
+    <view class="progress-section">
+      <text class="section-title">阅读进度</text>
+      <view class="progress-container">
+        <text class="progress-text">{{progress}}%</text>
+        <slider
+          value="{{progress}}"
+          min="0"
+          max="100"
+          bindchange="updateProgress"
+          activeColor="#1989fa"
+          backgroundColor="#e5e5e5"
+        />
+      </view>
+      <button class="save-btn" bindtap="saveProgress">保存进度</button>
+    </view>
+
+    <view class="note-section">
+      <text class="section-title">阅读笔记</text>
+      <view class="note">
+        <text>{{reading.note || '暂无笔记'}}</text>
+      </view>
+    </view>
+  </view>
+</view>
