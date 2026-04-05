@@ -16,10 +16,13 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
+    # 微信小程序配置
+    wechat_app_id: str = ""
+    wechat_app_secret: str = ""
+
 
 settings = Settings()
 
 
 class HealthResponse(BaseModel):
     status: str
-

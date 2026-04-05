@@ -1,5 +1,22 @@
 .btn {
-  margin-top: 12px;
+  width: 100%;
+  padding: 20rpx;
+  border: none;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  font-weight: bold;
+  margin-top: 20rpx;
+}
+
+.btn.primary {
+  background: #1989fa;
+  color: #ffffff;
+}
+
+.btn.secondary {
+  background: #f0f0f0;
+  color: #333333;
+  margin-top: 15rpx;
 }
 
 input {
@@ -8,4 +25,3 @@ input {
   padding: 10px;
   background: #fff;
 }
-
