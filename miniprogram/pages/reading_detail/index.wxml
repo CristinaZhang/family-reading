@@ -10,19 +10,35 @@
 
   <view wx:else class="content">
     <view class="book-info">
-      <image class="cover" src="{{reading.book.cover}}" mode="aspectFit" />
+      <image class="cover" src="{{reading.book.cover}}" mode="aspectFit" wx:if="{{reading.book.cover}}" />
+      <view class="cover-placeholder" wx:else>
+        <text class="cover-icon">📚</text>
+      </view>
       <view class="info">
         <text class="title">{{reading.book.title}}</text>
         <text class="author">{{reading.book.author}}</text>
-        <text class="isbn">ISBN: {{reading.book.isbn}}</text>
-        <text class="pages">总页数: {{reading.book.pages}}</text>
+        <text class="isbn" wx:if="{{reading.book.isbn}}">ISBN: {{reading.book.isbn}}</text>
       </view>
     </view>
 
     <view class="status-section">
       <text class="section-title">阅读状态</text>
-      <view class="status-info">
-        <text class="status {{reading.status}}">{{reading.status === 'reading' ? '阅读中' : reading.status === 'finished' ? '已完成' : '其他'}}</text>
+      <view class="status-buttons">
+        <view
+          wx:for="{{['wishlist', 'reading', 'rereading', 'finished', 'paused']}}"
+          wx:key="*this"
+          class="status-btn {{item}}"
+          bindtap="changeStatus"
+          data-status="{{item}}"
+        >
+          {{statusLabels[item]}}
+        </view>
+      </view>
+      <view class="current-status">
+        <text>当前状态：</text>
+        <text class="status-badge {{reading.status}}">{{statusLabels[reading.status] || reading.status}}</text>
+      </view>
+      <view class="date-info">
         <text class="date">开始日期: {{reading.startDate}}</text>
         <text class="date">更新日期: {{reading.updatedAt}}</text>
       </view>

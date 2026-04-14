@@ -86,7 +86,36 @@ Page({
     });
   },
 
+  async deleteReading(e) {
+    const readingId = e.currentTarget.dataset.id;
+    const item = this.data.readingList.find(r => r.id === readingId);
+
+    wx.showModal({
+      title: "确认删除",
+      content: `确定要删除"${item ? item.book.title : "该记录"}"吗？`,
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            await request("DELETE", `/v1/readings/${readingId}`);
+            this.setData({
+              readingList: this.data.readingList.filter(r => r.id !== readingId),
+            });
+            wx.showToast({ title: "已删除", icon: "success" });
+          } catch (e) {
+            console.error('删除阅读记录失败:', e);
+            wx.showToast({ title: "删除失败，请重试", icon: "none" });
+          }
+        }
+      },
+    });
+  },
+
   refresh() {
     this.getReadingList();
-  }
+  },
+
+  async onPullDownRefresh() {
+    await this.getReadingList();
+    wx.stopPullDownRefresh();
+  },
 });

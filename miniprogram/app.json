@@ -4,7 +4,8 @@
     "pages/home/index",
     "pages/scan_add/index",
     "pages/reading_list/index",
-    "pages/reading_detail/index"
+    "pages/reading_detail/index",
+    "pages/settings/index"
   ],
   "window": {
     "navigationBarTitleText": "家庭阅读记录",

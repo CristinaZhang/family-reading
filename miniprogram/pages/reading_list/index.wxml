@@ -13,21 +13,24 @@
       wx:for="{{readingList}}"
       wx:key="id"
       class="item"
-      bindtap="goToDetail"
-      data-id="{{item.id}}"
     >
-      <image class="cover" src="{{item.book.cover}}" mode="aspectFit" wx:if="{{item.book.cover}}" />
-      <view class="cover-placeholder" wx:else>
-        <text class="cover-icon">📚</text>
-      </view>
-      <view class="info">
-        <text class="title">{{item.book.title}}</text>
-        <text class="author">{{item.book.author}}</text>
-        <view class="status-container">
-          <text class="status {{item.status}}">{{item.status === 'reading' ? '阅读中' : item.status === 'finished' ? '已完成' : '其他'}}</text>
-          <text class="progress">{{item.progress}}%</text>
+      <view class="item-content" bindtap="goToDetail" data-id="{{item.id}}">
+        <image class="cover" src="{{item.book.cover}}" mode="aspectFit" wx:if="{{item.book.cover}}" />
+        <view class="cover-placeholder" wx:else>
+          <text class="cover-icon">📚</text>
         </view>
-        <text class="date">{{item.updatedAt}}</text>
+        <view class="info">
+          <text class="title">{{item.book.title}}</text>
+          <text class="author">{{item.book.author}}</text>
+          <view class="status-container">
+            <text class="status {{item.status}}">{{item.status === 'reading' ? '阅读中' : item.status === 'finished' ? '已完成' : '其他'}}</text>
+            <text class="progress">{{item.progress}}%</text>
+          </view>
+          <text class="date">{{item.updatedAt}}</text>
+        </view>
+      </view>
+      <view class="delete-btn" bindtap="deleteReading" data-id="{{item.id}}">
+        <text>删除</text>
       </view>
     </view>
 

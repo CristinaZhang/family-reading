@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import random
 from datetime import datetime
 from typing import Optional
 
@@ -13,7 +12,7 @@ from app.auth import AuthUser, get_current_user
 from app.db.database import get_session
 from app.db.models import BookMeta
 from app.services.book_provider import RealBookProvider, dumps_raw
-from app.services.isbn import _isbn13_checkdigit, to_isbn13
+from app.services.isbn import to_isbn13
 
 router = APIRouter(tags=["books"])
 
@@ -32,7 +31,7 @@ class CreateBookRequest(BaseModel):
 
 class BookMetaResponse(BaseModel):
     id: int
-    isbn13: str
+    isbn13: Optional[str] = None
     title: str
     authors: list[str]
     publisher: Optional[str] = None
@@ -119,13 +118,10 @@ def create_book(
     # 处理作者列表
     authors = [author.strip() for author in req.authors.split(",") if author.strip()]
 
-    # 如果没有提供ISBN，生成唯一ISBN-13（978前缀 + 9位随机数 + 校验位）
-    if isbn13 is None:
-        body12 = "978" + f"{random.randint(0, 999999999):09d}"
-        isbn13 = body12 + _isbn13_checkdigit(body12)
-
-    # 检查是否已存在
-    existing = session.exec(select(BookMeta).where(BookMeta.isbn13 == isbn13)).first()
+    # 只在有真实ISBN时检查重复
+    existing = None
+    if isbn13 is not None:
+        existing = session.exec(select(BookMeta).where(BookMeta.isbn13 == isbn13)).first()
     if existing:
         # 更新现有书籍
         existing.title = req.title
@@ -176,3 +172,84 @@ def create_book(
         categories=[],
         created_at=bm.created_at,
     )
+
+
+class PatchBookRequest(BaseModel):
+    title: Optional[str] = None
+    authors: Optional[str] = None
+    publisher: Optional[str] = None
+    pub_date: Optional[str] = None
+
+
+@router.get("/books", response_model=list[BookMetaResponse])
+def list_books(
+    session: Session = Depends(get_session),
+    _: AuthUser = Depends(get_current_user),
+) -> list[BookMetaResponse]:
+    rows = session.exec(select(BookMeta).order_by(BookMeta.created_at.desc())).all()
+    return [
+        BookMetaResponse(
+            id=b.id,
+            isbn13=b.isbn13,
+            title=b.title,
+            authors=json.loads(b.authors_json or "[]"),
+            publisher=b.publisher,
+            pub_date=b.pub_date,
+            cover_url=b.cover_url,
+            summary=b.summary,
+            categories=json.loads(b.categories_json or "[]"),
+            created_at=b.created_at,
+        )
+        for b in rows
+    ]
+
+
+@router.patch("/books/{book_id}", response_model=BookMetaResponse)
+def patch_book(
+    book_id: int,
+    req: PatchBookRequest,
+    session: Session = Depends(get_session),
+    _: AuthUser = Depends(get_current_user),
+) -> BookMetaResponse:
+    bm = session.exec(select(BookMeta).where(BookMeta.id == book_id)).first()
+    if not bm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="book not found")
+
+    if req.title is not None:
+        bm.title = req.title
+    if req.authors is not None:
+        authors = [a.strip() for a in req.authors.split(",") if a.strip()]
+        bm.authors_json = json.dumps(authors, ensure_ascii=False)
+    if req.publisher is not None:
+        bm.publisher = req.publisher
+    if req.pub_date is not None:
+        bm.pub_date = req.pub_date
+
+    session.commit()
+    session.refresh(bm)
+
+    return BookMetaResponse(
+        id=bm.id,
+        isbn13=bm.isbn13,
+        title=bm.title,
+        authors=json.loads(bm.authors_json or "[]"),
+        publisher=bm.publisher,
+        pub_date=bm.pub_date,
+        cover_url=bm.cover_url,
+        summary=bm.summary,
+        categories=json.loads(bm.categories_json or "[]"),
+        created_at=bm.created_at,
+    )
+
+
+@router.delete("/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_book(
+    book_id: int,
+    session: Session = Depends(get_session),
+    _: AuthUser = Depends(get_current_user),
+) -> None:
+    bm = session.exec(select(BookMeta).where(BookMeta.id == book_id)).first()
+    if not bm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="book not found")
+    session.delete(bm)
+    session.commit()

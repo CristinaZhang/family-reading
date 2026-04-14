@@ -1,5 +1,13 @@
 const { request } = require("../../utils/api");
 
+const STATUS_LABELS = {
+  wishlist: "想读",
+  reading: "阅读中",
+  finished: "已读完",
+  paused: "暂停",
+  rereading: "重读",
+};
+
 Page({
   data: {
     reading: null,
@@ -8,6 +16,7 @@ Page({
     progress: 0,
     readingId: null,
     familyId: null,
+    statusLabels: STATUS_LABELS,
   },
 
   onLoad(options) {
@@ -20,11 +29,9 @@ Page({
     try {
       this.setData({ loading: true, error: false });
 
-      // 调用API获取阅读记录详情
       const reading = await request("GET", `/v1/readings/${id}`);
       const book = reading.book || {};
 
-      // 获取家庭信息
       const families = await request("GET", "/v1/families");
       if (families && families.length > 0) {
         this.setData({ familyId: families[0].id });
@@ -84,6 +91,31 @@ Page({
       console.error('保存进度失败:', e);
       wx.hideLoading();
       wx.showToast({ title: '保存失败，请重试', icon: 'none' });
+    }
+  },
+
+  async changeStatus(e) {
+    const newStatus = e.currentTarget.dataset.status;
+    const readingId = this.data.readingId;
+    if (!readingId) return;
+
+    try {
+      wx.showLoading({ title: '更新中...' });
+
+      await request("PATCH", `/v1/readings/${readingId}`, {
+        status: newStatus,
+      });
+
+      this.setData({ "reading.status": newStatus });
+      wx.hideLoading();
+      wx.showToast({
+        title: `状态已更新为"${STATUS_LABELS[newStatus] || newStatus}"`,
+        icon: 'success',
+      });
+    } catch (e) {
+      console.error('更新状态失败:', e);
+      wx.hideLoading();
+      wx.showToast({ title: '更新失败，请重试', icon: 'none' });
     }
   },
 

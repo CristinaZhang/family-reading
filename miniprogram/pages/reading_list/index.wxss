@@ -29,6 +29,29 @@
   margin-bottom: 20rpx;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  align-items: center;
+}
+
+.item-content {
+  flex: 1;
+  display: flex;
+}
+
+.delete-btn {
+  margin-left: 16rpx;
+  padding: 12rpx 20rpx;
+  background-color: #fff2f0;
+  border: 1rpx solid #ffccc7;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.delete-btn text {
+  font-size: 24rpx;
+  color: #ff4d4f;
 }
 
 .item:hover {

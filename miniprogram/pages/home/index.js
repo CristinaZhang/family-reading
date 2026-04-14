@@ -14,7 +14,7 @@ Page({
   },
 
   async bootstrap() {
-    // MVP：后端目前只支持“我作为 owner 的家庭列表”
+    // MVP：后端目前只支持"我作为 owner 的家庭列表"
     const families = await request("GET", "/v1/families");
     if (!families.length) {
       const fam = await request("POST", "/v1/families", { name: "我家" });
@@ -25,7 +25,7 @@ Page({
 
     const members = await request("GET", `/v1/families/${this.data.family.id}/members`);
     if (!members.length) {
-      // 默认创建一个“我”，方便快速体验
+      // 默认创建一个"我"，方便快速体验
       await request("POST", `/v1/families/${this.data.family.id}/members`, { display_name: "我" });
     }
 
@@ -38,12 +38,8 @@ Page({
     this.setData({ members, dash });
   },
 
-  goScan() {
-    wx.navigateTo({ url: "/pages/scan_add/index" });
-  },
-
-  goReadingList() {
-    wx.navigateTo({ url: "/pages/reading_list/index" });
+  goSettings() {
+    wx.navigateTo({ url: "/pages/settings/index" });
   },
 
   logout() {
@@ -52,4 +48,3 @@ Page({
     wx.reLaunch({ url: "/pages/login/index" });
   },
 });
-

@@ -1,0 +1,64 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="loading">
+    <text>加载中...</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="error">
+    <text>加载失败，请重试</text>
+    <button bindtap="loadFamily">重新加载</button>
+  </view>
+
+  <view wx:else class="content">
+    <!-- 家庭名称 -->
+    <view class="section">
+      <text class="section-title">家庭名称</text>
+      <view class="family-name-row">
+        <text class="family-name">{{familyName}}</text>
+      </view>
+    </view>
+
+    <!-- 家庭成员 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">家庭成员</text>
+        <text class="add-btn" bindtap="showAddMemberInput">+ 添加</text>
+      </view>
+
+      <view class="member-list">
+        <view
+          wx:for="{{members}}"
+          wx:key="id"
+          class="member-item"
+        >
+          <view class="member-avatar">
+            <text wx:if="{{item.avatar_url}}">👤</text>
+            <text wx:else>{{item.display_name[0]}}</text>
+          </view>
+          <text class="member-name">{{item.display_name}}</text>
+        </view>
+
+        <view wx:if="{{members.length === 0}}" class="empty-hint">
+          <text>暂无成员，点击添加</text>
+        </view>
+      </view>
+
+      <!-- 添加成员输入 -->
+      <view wx:if="{{showAddMember}}" class="add-member-input">
+        <input
+          class="input"
+          placeholder="输入成员名称"
+          value="{{newMemberName}}"
+          bindinput="onMemberNameInput"
+          focus="{{showAddMember}}"
+        />
+        <view class="input-actions">
+          <button class="btn-confirm" size="mini" bindtap="addMember">确定</button>
+          <button class="btn-cancel" size="mini" bindtap="hideAddMemberInput">取消</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 返回按钮 -->
+    <button class="back-btn" bindtap="goBack">返回首页</button>
+  </view>
+</view>

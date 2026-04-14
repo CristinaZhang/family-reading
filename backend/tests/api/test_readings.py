@@ -333,3 +333,60 @@ def test_list_readings_with_filters(client: TestClient, auth_token: str):
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
+
+
+def test_delete_reading(client: TestClient, auth_token: str):
+    """测试删除阅读记录接口"""
+    # 先创建家庭
+    family_response = client.post(
+        "/v1/families",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"name": "测试家庭"}
+    )
+    family_id = family_response.json()["id"]
+
+    # 添加家庭成员
+    member_response = client.post(
+        f"/v1/families/{family_id}/members",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"display_name": "测试成员"}
+    )
+    member_id = member_response.json()["id"]
+
+    # 解析书籍
+    book_response = client.post(
+        "/v1/books/resolve",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"isbn": "9787544270878"}
+    )
+    book_meta_id = book_response.json()["id"]
+
+    # 创建阅读记录
+    create_response = client.post(
+        "/v1/readings",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "family_id": family_id,
+            "member_id": member_id,
+            "book_meta_id": book_meta_id,
+            "status": "reading",
+            "progress_type": "page",
+            "progress_value": 10
+        }
+    )
+    reading_id = create_response.json()["id"]
+
+    # 删除阅读记录
+    response = client.delete(
+        f"/v1/readings/{reading_id}",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 204
+
+    # 确认记录已被删除
+    response = client.get(
+        f"/v1/families/{family_id}/readings",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    data = response.json()
+    assert not any(r["id"] == reading_id for r in data)

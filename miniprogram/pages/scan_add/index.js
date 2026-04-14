@@ -21,25 +21,28 @@ Page({
 
   // 初始化家庭信息（复用 home 页的逻辑）
   async initFamily() {
-    try {
-      const families = await request("GET", "/v1/families");
-      if (!families.length) {
-        const fam = await request("POST", "/v1/families", { name: "我家" });
-        this.setData({ familyId: fam.id });
-      } else {
-        this.setData({ familyId: families[0].id });
-      }
+    const families = await request("GET", "/v1/families");
+    if (!families.length) {
+      const fam = await request("POST", "/v1/families", { name: "我家" });
+      this.setData({ familyId: fam.id });
+    } else {
+      this.setData({ familyId: families[0].id });
+    }
 
-      // 确保有成员
-      const members = await request("GET", `/v1/families/${this.data.familyId}/members`);
-      if (!members.length) {
-        const m = await request("POST", `/v1/families/${this.data.familyId}/members`, { display_name: "我" });
-        this.setData({ memberId: m.id });
-      } else {
-        this.setData({ memberId: members[0].id });
-      }
-    } catch (e) {
-      console.error('初始化家庭失败:', e);
+    // 确保有成员
+    const members = await request("GET", `/v1/families/${this.data.familyId}/members`);
+    if (!members.length) {
+      const m = await request("POST", `/v1/families/${this.data.familyId}/members`, { display_name: "我" });
+      this.setData({ memberId: m.id });
+    } else {
+      this.setData({ memberId: members[0].id });
+    }
+  },
+
+  // 确保家庭信息已初始化，如果没初始化过则等待
+  async ensureFamilyInit() {
+    if (!this.data.familyId || !this.data.memberId) {
+      await this.initFamily();
     }
   },
 
@@ -89,7 +92,10 @@ Page({
         isbn: null,
       });
 
-      // 2. 创建阅读记录
+      // 2. 确保家庭信息已初始化
+      await this.ensureFamilyInit();
+
+      // 3. 创建阅读记录
       if (this.data.familyId && this.data.memberId) {
         await request("POST", "/v1/readings", {
           family_id: this.data.familyId,
@@ -161,6 +167,9 @@ Page({
       wx.showLoading({ title: '正在添加书籍...' });
 
       let successCount = 0;
+      // 先确保家庭信息已初始化
+      await this.ensureFamilyInit();
+
       for (const title of bookTitles) {
         try {
           // 1. 创建书籍

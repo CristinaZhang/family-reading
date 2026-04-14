@@ -49,7 +49,7 @@ class ReadingCreateRequest(BaseModel):
 
 class BookMetaBrief(BaseModel):
     id: int
-    isbn13: str
+    isbn13: Optional[str] = None
     title: str
     authors: list[str]
     cover_url: Optional[str] = None
@@ -260,6 +260,21 @@ def get_reading(
         created_at=r.created_at,
         updated_at=r.updated_at,
     )
+
+
+@router.delete("/readings/{reading_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_reading(
+    reading_id: int,
+    session: Session = Depends(get_session),
+    user: AuthUser = Depends(get_current_user),
+) -> None:
+    r = session.exec(select(Reading).where(Reading.id == reading_id)).first()
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="reading not found")
+    _require_family_owner(session, r.family_id, user.id)
+
+    session.delete(r)
+    session.commit()
 
 
 @router.get("/families/{family_id}/readings", response_model=list[ReadingResponse])

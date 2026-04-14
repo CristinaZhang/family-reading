@@ -118,8 +118,7 @@ def test_create_book_only_title(client: TestClient, auth_token: str):
     assert "id" in data
     assert data["title"] == "直接添加的书籍"
     assert data["authors"] == []  # 应该是空数组
-    assert data["isbn13"].startswith("978")  # 应该生成978开头的唯一ISBN
-    assert len(data["isbn13"]) == 13
+    assert data["isbn13"] is None  # 无ISBN时返回null
     assert data["publisher"] is None
     assert data["pub_date"] is None
 
@@ -158,6 +157,97 @@ def test_create_book_without_isbn_creates_unique_records(client: TestClient, aut
 
     # 两本书应该是不同的记录
     assert data1["id"] != data2["id"]
-    assert data1["isbn13"] != data2["isbn13"]
+    assert data1["isbn13"] is None
+    assert data2["isbn13"] is None
     assert data1["title"] == "书A"
     assert data2["title"] == "书B"
+
+
+def test_list_books(client: TestClient, auth_token: str):
+    """测试获取书籍列表接口"""
+    # 先创建一本书
+    client.post(
+        "/v1/books",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "title": "列表测试书籍",
+            "authors": "测试作者",
+            "publisher": None,
+            "pub_date": None,
+            "isbn": None
+        }
+    )
+
+    response = client.get(
+        "/v1/books",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+
+
+def test_patch_book(client: TestClient, auth_token: str):
+    """测试更新书籍信息接口"""
+    # 先创建一本书
+    create_response = client.post(
+        "/v1/books",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "title": "原始书名",
+            "authors": "",
+            "publisher": None,
+            "pub_date": None,
+            "isbn": None
+        }
+    )
+    book_id = create_response.json()["id"]
+
+    # 更新书籍
+    response = client.patch(
+        f"/v1/books/{book_id}",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "title": "更新后的书名",
+            "authors": "新作者",
+            "publisher": "新出版社"
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["title"] == "更新后的书名"
+    assert data["authors"] == ["新作者"]
+    assert data["publisher"] == "新出版社"
+
+
+def test_delete_book(client: TestClient, auth_token: str):
+    """测试删除书籍接口"""
+    # 先创建一本书
+    create_response = client.post(
+        "/v1/books",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={
+            "title": "待删除书籍",
+            "authors": "",
+            "publisher": None,
+            "pub_date": None,
+            "isbn": None
+        }
+    )
+    book_id = create_response.json()["id"]
+
+    # 删除书籍
+    response = client.delete(
+        f"/v1/books/{book_id}",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 204
+
+    # 确认书籍已被删除
+    response = client.get(
+        "/v1/books",
+        headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    data = response.json()
+    assert not any(b["id"] == book_id for b in data)
