@@ -5,46 +5,56 @@ Page({
     reading: null,
     loading: true,
     error: false,
-    progress: 0
+    progress: 0,
+    readingId: null,
+    familyId: null,
   },
 
   onLoad(options) {
     const { id } = options;
+    this.setData({ readingId: id });
     this.getReadingDetail(id);
   },
 
   async getReadingDetail(id) {
     try {
       this.setData({ loading: true, error: false });
-      // 这里应该调用API获取阅读记录详情
-      // 模拟API调用
-      setTimeout(() => {
-        const mockData = {
-          id: id,
+
+      // 调用API获取阅读记录详情
+      const reading = await request("GET", `/v1/readings/${id}`);
+      const book = reading.book || {};
+
+      // 获取家庭信息
+      const families = await request("GET", "/v1/families");
+      if (families && families.length > 0) {
+        this.setData({ familyId: families[0].id });
+      }
+
+      this.setData({
+        reading: {
+          id: reading.id,
           book: {
-            title: "小王子",
-            author: "安托万·德·圣-埃克苏佩里",
-            cover: "https://example.com/cover1.jpg",
-            isbn: "9787544270878",
-            pages: 200
+            title: book.title || "未知书籍",
+            author: (book.authors || []).join(", ") || "未知作者",
+            cover: book.cover_url || null,
+            isbn: book.isbn13 || "",
+            pages: null,
           },
-          status: "reading",
-          progress: 50,
-          startDate: "2024-01-01",
-          updatedAt: "2024-01-05",
-          note: "这是一本非常经典的童话书，值得一读。"
-        };
-        this.setData({
-          reading: mockData,
-          progress: mockData.progress,
-          loading: false
-        });
-      }, 1000);
+          status: reading.status,
+          progress: reading.progress_value,
+          startDate: reading.started_on || "未知",
+          updatedAt: reading.updated_at,
+          note: reading.note || "",
+        },
+        progress: reading.progress_value,
+        loading: false,
+      });
     } catch (e) {
+      console.error('获取阅读详情失败:', e);
       this.setData({ error: true, loading: false });
       wx.showToast({
         title: '获取阅读详情失败',
-        icon: 'none'
+        icon: 'none',
       });
     }
   },
@@ -56,22 +66,24 @@ Page({
 
   async saveProgress() {
     try {
+      const readingId = this.data.readingId;
+      if (!readingId) {
+        wx.showToast({ title: '阅读记录不存在', icon: 'none' });
+        return;
+      }
+
       wx.showLoading({ title: '保存中...' });
-      // 这里应该调用API更新阅读进度
-      // 模拟API调用
-      setTimeout(() => {
-        wx.hideLoading();
-        wx.showToast({
-          title: '保存成功',
-          icon: 'success'
-        });
-      }, 1000);
-    } catch (e) {
-      wx.hideLoading();
-      wx.showToast({
-        title: '保存失败，请重试',
-        icon: 'none'
+
+      await request("PATCH", `/v1/readings/${readingId}`, {
+        progress_value: this.data.progress,
       });
+
+      wx.hideLoading();
+      wx.showToast({ title: '保存成功', icon: 'success' });
+    } catch (e) {
+      console.error('保存进度失败:', e);
+      wx.hideLoading();
+      wx.showToast({ title: '保存失败，请重试', icon: 'none' });
     }
   },
 
@@ -80,5 +92,5 @@ Page({
     if (reading) {
       this.getReadingDetail(reading.id);
     }
-  }
+  },
 });

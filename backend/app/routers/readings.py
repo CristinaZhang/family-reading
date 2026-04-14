@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from typing import Optional
 
@@ -46,11 +47,20 @@ class ReadingCreateRequest(BaseModel):
     create_book_copy: Optional[BookCopyCreate] = None
 
 
+class BookMetaBrief(BaseModel):
+    id: int
+    isbn13: str
+    title: str
+    authors: list[str]
+    cover_url: Optional[str] = None
+
+
 class ReadingResponse(BaseModel):
     id: int
     family_id: int
     member_id: int
     book_meta_id: int
+    book: BookMetaBrief
     book_copy_id: Optional[int] = None
     status: ReadingStatus
     started_on: Optional[date] = None
@@ -114,7 +124,33 @@ def create_reading(
     session.commit()
     session.refresh(r)
 
-    return ReadingResponse.model_validate(r, from_attributes=True)
+    # 获取书籍信息
+    book = session.exec(select(BookMeta).where(BookMeta.id == r.book_meta_id)).first()
+    book_brief = BookMetaBrief(
+        id=book.id,
+        isbn13=book.isbn13,
+        title=book.title,
+        authors=json.loads(book.authors_json or "[]"),
+        cover_url=book.cover_url
+    )
+
+    return ReadingResponse(
+        id=r.id,
+        family_id=r.family_id,
+        member_id=r.member_id,
+        book_meta_id=r.book_meta_id,
+        book=book_brief,
+        book_copy_id=r.book_copy_id,
+        status=r.status,
+        started_on=r.started_on,
+        finished_on=r.finished_on,
+        last_read_on=r.last_read_on,
+        progress_type=r.progress_type,
+        progress_value=r.progress_value,
+        note=r.note,
+        created_at=r.created_at,
+        updated_at=r.updated_at
+    )
 
 
 class ReadingPatchRequest(BaseModel):
@@ -158,7 +194,72 @@ def patch_reading(
     session.add(r)
     session.commit()
     session.refresh(r)
-    return ReadingResponse.model_validate(r, from_attributes=True)
+
+    book = session.exec(select(BookMeta).where(BookMeta.id == r.book_meta_id)).first()
+    book_brief = BookMetaBrief(
+        id=book.id,
+        isbn13=book.isbn13,
+        title=book.title,
+        authors=json.loads(book.authors_json or "[]"),
+        cover_url=book.cover_url,
+    )
+
+    return ReadingResponse(
+        id=r.id,
+        family_id=r.family_id,
+        member_id=r.member_id,
+        book_meta_id=r.book_meta_id,
+        book=book_brief,
+        book_copy_id=r.book_copy_id,
+        status=r.status,
+        started_on=r.started_on,
+        finished_on=r.finished_on,
+        last_read_on=r.last_read_on,
+        progress_type=r.progress_type,
+        progress_value=r.progress_value,
+        note=r.note,
+        created_at=r.created_at,
+        updated_at=r.updated_at,
+    )
+
+
+@router.get("/readings/{reading_id}", response_model=ReadingResponse)
+def get_reading(
+    reading_id: int,
+    session: Session = Depends(get_session),
+    user: AuthUser = Depends(get_current_user),
+) -> ReadingResponse:
+    r = session.exec(select(Reading).where(Reading.id == reading_id)).first()
+    if not r:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="reading not found")
+    _require_family_owner(session, r.family_id, user.id)
+
+    book = session.exec(select(BookMeta).where(BookMeta.id == r.book_meta_id)).first()
+    book_brief = BookMetaBrief(
+        id=book.id,
+        isbn13=book.isbn13,
+        title=book.title,
+        authors=json.loads(book.authors_json or "[]"),
+        cover_url=book.cover_url,
+    )
+
+    return ReadingResponse(
+        id=r.id,
+        family_id=r.family_id,
+        member_id=r.member_id,
+        book_meta_id=r.book_meta_id,
+        book=book_brief,
+        book_copy_id=r.book_copy_id,
+        status=r.status,
+        started_on=r.started_on,
+        finished_on=r.finished_on,
+        last_read_on=r.last_read_on,
+        progress_type=r.progress_type,
+        progress_value=r.progress_value,
+        note=r.note,
+        created_at=r.created_at,
+        updated_at=r.updated_at,
+    )
 
 
 @router.get("/families/{family_id}/readings", response_model=list[ReadingResponse])
@@ -179,5 +280,35 @@ def list_readings(
     stmt = stmt.order_by(Reading.updated_at.desc())
 
     rows = session.exec(stmt).all()
-    return [ReadingResponse.model_validate(r, from_attributes=True) for r in rows]
+    response_list = []
+    for r in rows:
+        # 获取书籍信息
+        book = session.exec(select(BookMeta).where(BookMeta.id == r.book_meta_id)).first()
+        book_brief = BookMetaBrief(
+            id=book.id,
+            isbn13=book.isbn13,
+            title=book.title,
+            authors=json.loads(book.authors_json or "[]"),
+            cover_url=book.cover_url
+        )
 
+        response = ReadingResponse(
+            id=r.id,
+            family_id=r.family_id,
+            member_id=r.member_id,
+            book_meta_id=r.book_meta_id,
+            book=book_brief,
+            book_copy_id=r.book_copy_id,
+            status=r.status,
+            started_on=r.started_on,
+            finished_on=r.finished_on,
+            last_read_on=r.last_read_on,
+            progress_type=r.progress_type,
+            progress_value=r.progress_value,
+            note=r.note,
+            created_at=r.created_at,
+            updated_at=r.updated_at
+        )
+        response_list.append(response)
+
+    return response_list

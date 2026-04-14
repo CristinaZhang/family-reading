@@ -44,6 +44,21 @@
   background-color: #f0f0f0;
 }
 
+.cover-placeholder {
+  width: 120rpx;
+  height: 160rpx;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  background-color: #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cover-placeholder .cover-icon {
+  font-size: 60rpx;
+}
+
 .info {
   flex: 1;
   display: flex;

@@ -1,12 +1,73 @@
 <view class="container">
   <view class="content">
-    <image class="scan-icon" src="/images/scan.png" />
-    <text class="title">扫码添加书籍</text>
-    <text class="hint">正在启动扫码...</text>
-    <view class="isbn-display" wx:if="{{isbn}}">
-      <text class="label">ISBN:</text>
-      <text class="isbn">{{isbn}}</text>
+    <view class="scan-icon">
+      <text class="icon">📚</text>
     </view>
-    <button class="rescan-btn" bindtap="scanISBN">重新扫码</button>
+    <text class="title">添加书籍</text>
+
+    <!-- 模式选择 -->
+    <view class="mode-tabs">
+      <view
+        class="mode-tab {{mode === 'single' ? 'active' : ''}}"
+        bindtap="switchToSingle"
+      >
+        添加书籍
+      </view>
+      <view
+        class="mode-tab {{mode === 'batch' ? 'active' : ''}}"
+        bindtap="switchToBatch"
+      >
+        批量输入
+      </view>
+    </view>
+
+    <!-- 单本添加模式 -->
+    <view wx:if="{{mode === 'single'}}">
+      <view class="form-input">
+        <text class="input-label">书名 <text class="required">*</text></text>
+        <input
+          class="input"
+          placeholder="请输入书名"
+          value="{{title}}"
+          bindinput="onTitleInput"
+        />
+
+        <text class="input-label">作者</text>
+        <input
+          class="input"
+          placeholder="可选，多个作者用逗号分隔"
+          value="{{authors}}"
+          bindinput="onAuthorsInput"
+        />
+
+        <text class="input-label">出版社</text>
+        <input
+          class="input"
+          placeholder="可选"
+          value="{{publisher}}"
+          bindinput="onPublisherInput"
+        />
+
+        <button class="submit-btn" bindtap="addBook" loading="{{loading}}" disabled="{{loading}}">添加书籍</button>
+      </view>
+    </view>
+
+    <!-- 批量输入模式 -->
+    <view wx:if="{{mode === 'batch'}}">
+      <view class="batch-input">
+        <text class="input-label">批量输入书籍名字</text>
+        <text class="hint">一行一个书名，或用逗号分隔</text>
+        <textarea
+          class="textarea"
+          placeholder="请输入书籍名字，一行一个或用逗号分隔"
+          value="{{batchBooks}}"
+          bindinput="onBatchBooksInput"
+          style="height: 300rpx;"
+        />
+        <button class="batch-btn" bindtap="addBatchBooks" loading="{{loading}}" disabled="{{loading}}">批量添加</button>
+      </view>
+    </view>
+
+    <button class="back-btn" bindtap="navigateBack">返回</button>
   </view>
 </view>

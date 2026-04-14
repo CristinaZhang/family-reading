@@ -16,7 +16,10 @@
       bindtap="goToDetail"
       data-id="{{item.id}}"
     >
-      <image class="cover" src="{{item.book.cover}}" mode="aspectFit" />
+      <image class="cover" src="{{item.book.cover}}" mode="aspectFit" wx:if="{{item.book.cover}}" />
+      <view class="cover-placeholder" wx:else>
+        <text class="cover-icon">📚</text>
+      </view>
       <view class="info">
         <text class="title">{{item.book.title}}</text>
         <text class="author">{{item.book.author}}</text>
