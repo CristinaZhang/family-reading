@@ -1,0 +1,11 @@
+{
+  "name": "family-reading-miniprogram",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:verbose": "jest --verbose"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

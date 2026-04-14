@@ -76,6 +76,13 @@ pytest tests/ --cov=app --cov-report=html
 
 Open the `miniprogram/` directory in WeChat DevTools. The backend must be running locally at `http://127.0.0.1:8000` (configurable in `miniprogram/utils/config.js`).
 
+```bash
+# Run frontend tests
+cd miniprogram
+npm test
+npm run test:verbose
+```
+
 ## Architecture
 
 ### Backend (FastAPI + SQLModel + SQLite)
@@ -116,7 +123,15 @@ Open the `miniprogram/` directory in WeChat DevTools. The backend must be runnin
 
 - Uses `wx.request` wrapped in `miniprogram/utils/api.js` with Bearer token auth
 - Token stored in `wx.setStorageSync("access_token")`
-- Pages: login → home → scan_add / reading_list / reading_detail
+- Pages: login → home → scan_add / reading_list / reading_detail / settings
+
+### Frontend Testing
+
+- Jest-based tests in `miniprogram/__tests__/`
+- `__mocks__/wx.js` provides mocked WeChat runtime APIs (`wx.request`, `wx.showToast`, etc.)
+- `api.test.js` — tests the request wrapper (token injection, URL construction, response handling)
+- `page_logic.test.js` — tests page business logic by recreating page methods with the real `request()` function
+- Run: `cd miniprogram && npm test`
 
 ### Testing
 
