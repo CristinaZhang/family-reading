@@ -130,5 +130,7 @@ Open the `miniprogram/` directory in WeChat DevTools. The backend must be runnin
 See `backend/.env.example`. Key vars:
 - `DATABASE_URL` - Database connection string
 - `ENABLE_DEV_LOGIN` - Enable/disable dev login (default: 1)
-- `WECHAT_APP_ID` / `WECHAT_APP_SECRET` - WeChat miniprogram credentials
+- `WECHAT_APP_ID` / `WECHAT_APP_SECRET` - WeChat miniprogram credentials (**stored in `backend/local.env`, never committed**)
 - `CORS_ORIGINS` - Comma-separated allowed origins
+
+**Local config**: WeChat credentials go in `backend/local.env` (gitignored). The `Settings` class auto-loads it as an override to `.env`.
