@@ -116,10 +116,13 @@ def _template_response(request: Request, name: str, context: dict | None = None,
 
 
 def _htmx_redirect(request: Request, url: str) -> Response:
-    """Smart redirect: 200+HX-Redirect for HTMX, 302 for browser forms."""
+    """Smart redirect: 200+HX-Redirect for HTMX, 303 for everything else.
+
+    303 forces browser/fetch to follow with GET, preventing method mismatch.
+    """
     if request.headers.get("HX-Request"):
         return Response(status_code=200, headers={"HX-Redirect": url})
-    return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
+    return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 # --- Page routes ---
