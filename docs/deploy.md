@@ -30,60 +30,161 @@
 
 ---
 
-## 2. GitHub Actions 工作流
+## 2. 持续集成与发布 (CI/CD)
 
-### 2.1 CI 工作流（`.github/workflows/ci.yml`）
+本项目的 CI/CD 全部由 GitHub Actions 管理，以下三个 workflow 归口管理：
+
+### 2.1 CI 测试（`.github/workflows/ci.yml`）
 
 **触发条件**: push 或 PR 到 `main` 分支
 
-**运行内容**:
-- **backend-tests**: Python 3.12, 安装依赖, 运行 `pytest tests/ -v --tb=short`
-- **miniprogram-tests**: Node.js 20, 安装依赖, 运行 `npm test`
+| Job | 环境 | 命令 |
+|-----|------|------|
+| backend-tests | Python 3.12 | `pytest tests/ -v --tb=short` |
+| miniprogram-tests | Node.js 20 | `npm test` |
 
 两个 job 并行运行，互不依赖。测试使用内存 SQLite 和 mock 微信 API，不需要真实数据库或网络。
 
-### 2.2 Release 工作流（`.github/workflows/release.yml`）
+### 2.2 Release 构建（`.github/workflows/release.yml`）
 
 **触发条件**: 推送 `v*` 格式的 tag（如 `v0.1.0`）
 
-**运行内容**:
-1. `docker/setup-buildx-action` — 启用 containerd driver（支持 GHA cache）
-2. `docker/login-action` — 登录 GHCR
-3. `docker/metadata-action` — 生成镜像 tag（`v0.1.0` + `latest`）
-4. `docker/build-push-action` — 构建并推送 Docker 镜像
+| 步骤 | Action | 说明 |
+|------|--------|------|
+| 1 | setup-buildx-action | 启用 containerd driver（支持 GHA cache） |
+| 2 | login-action | 登录 GHCR |
+| 3 | metadata-action | 生成镜像 tag（`<version>` + `latest`） |
+| 4 | build-push-action | 构建并推送 Docker 镜像 |
 
-**产出镜像**:
-- `ghcr.io/cristinazhang/family-reading:v0.1.0`
-- `ghcr.io/cristinazhang/family-reading:latest`
+**产出镜像**: `ghcr.io/cristinazhang/family-reading:<version>` + `:latest`
 
-**镜像信息**:
-- 基于 `python:3.12-slim`
-- 非 root 用户运行（安全性）
-- 暴露端口 8000
-- 启动命令: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+### 2.3 小程序自动上传（待实现）
 
-### 2.3 如何触发
+**计划 workflow**: `.github/workflows/miniprogram-ci.yml`
+
+通过微信官方 `miniprogram-ci` 工具在 CI 中自动上传体验版。
+
+**前置条件**:
+- 获取微信公众平台 CI 上传密钥（`.private.key`，不提交到 git）
+- 在 GitHub Secrets 中配置 `WECHAT_CI_KEY` 和 `WECHAT_APP_ID`
+- `miniprogram/package.json` 中添加 `miniprogram-ci` 依赖
+
+### 2.4 如何触发
 
 ```bash
-# 1. 确保代码已提交并推送到 main
+# 推送代码到 main（触发 CI 测试）
 git push origin main
 
-# 2. 打 tag 并推送
-git tag v0.1.0
-git push --tags
+# 打 tag（触发 Release 构建）
+git tag v0.1.0 && git push --tags
 
-# 3. 如需重新触发（删除旧 tag 后重建）
-git tag -d v0.1.0
-git push --delete origin v0.1.0
-git tag v0.1.0
-git push --tags
+# 如需重新触发 release（删除旧 tag 后重建）
+git tag -d v0.1.0 && git push --delete origin v0.1.0
+git tag v0.1.0 && git push --tags
 ```
 
 ---
 
-## 3. 小程序架构
+## 3. 系统架构
 
-### 3.1 页面流程图
+### 3.1 全系统架构图
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        微信小程序 (Miniprogram)                      │
+│                                                                     │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+│  │  login   │  │   home   │  │ scan_add │  │reading_  │           │
+│  │          │◀─┤          │──▶│          │  │list/detail│           │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘           │
+│       │              │              │              │                │
+│  ┌────┴──────────────┴──────────────┴──────────────┴─────┐         │
+│  │  utils/api.js  (wx.request + Bearer token 注入)        │         │
+│  │  utils/config.js  (BASE_URL 配置)                      │         │
+│  └────────────────────────┬──────────────────────────────┘         │
+└────────────────────────────┼───────────────────────────────────────┘
+                             │ HTTPS
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Backend (FastAPI)                               │
+│                                                                     │
+│  ┌───────────────────┐  ┌───────────────────────────────┐          │
+│  │  CORS Middleware  │  │  Auth Middleware               │          │
+│  │  (跨域处理)       │  │  (Bearer token → AuthUser)     │          │
+│  └────────┬──────────┘  └──────────────┬────────────────┘          │
+│           └──────────────┬─────────────┘                            │
+│                          ▼                                          │
+│  ┌───────────────────────────────────────────────────────┐         │
+│  │                    Routers (API)                       │         │
+│  │                                                       │         │
+│  │  auth.py     POST /v1/auth/wechat/login               │         │
+│  │              POST /v1/auth/dev/login                  │         │
+│  │                                                       │         │
+│  │  families.py POST /v1/families                        │         │
+│  │              GET  /v1/families                        │         │
+│  │              POST /v1/families/{id}/members           │         │
+│  │              GET  /v1/families/{id}/members           │         │
+│  │                                                       │         │
+│  │  books.py    POST /v1/books/resolve  (ISBN 查询)      │         │
+│  │              POST /v1/books          (手动创建)        │         │
+│  │                                                       │         │
+│  │  book_copies.py                                      │         │
+│  │  readings.py  POST/PATCH/GET /v1/readings             │         │
+│  │  dashboard.py GET /v1/families/{id}/dashboard         │         │
+│  └───────────────────────┬───────────────────────────────┘         │
+│                          │                                          │
+│  ┌───────────────────────┴───────────────────────────────┐         │
+│  │                  Services Layer                        │         │
+│  │                                                       │         │
+│  │  isbn.py         ISBN 校验/转换 (10→13)               │         │
+│  │  book_provider.py ISBN 元数据解析 (Open Library API)  │         │
+│  └───────────────────────┬───────────────────────────────┘         │
+│                          │                                          │
+│  ┌───────────────────────┴───────────────────────────────┐         │
+│  │                  Database Layer                        │         │
+│  │                                                       │         │
+│  │  database.py    SQLModel engine + session + init_db   │         │
+│  │  models.py      User / Family / FamilyMember          │         │
+│  │                 BookMeta / BookCopy / Reading          │         │
+│  └───────────────────────┬───────────────────────────────┘         │
+└────────────────────────────┼───────────────────────────────────────┘
+                             │ SQLModel ORM
+                             ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      数据库 (SQLite / PostgreSQL)                     │
+│                                                                     │
+│  users │ families │ family_members │ book_metas │ book_copies      │
+│  │ readings                                                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────┐
+│  Open Library API    │  ← 外部服务 (ISBN 元数据解析)
+│  (book_provider.py)  │
+└──────────────────────┘
+```
+
+### 3.2 小程序模块依赖图
+
+```
+miniprogram/
+├── app.js / app.json                    # 入口 & 全局配置
+├── utils/
+│   ├── config.js                        # BASE_URL 配置（需支持环境区分）
+│   └── api.js                           # HTTP 请求封装 (wx.request + token)
+├── pages/
+│   ├── login/                           # 登录页
+│   ├── home/                            # 主入口（家庭看板）
+│   ├── scan_add/                        # ISBN 扫码添加
+│   ├── reading_list/                    # 阅读记录列表
+│   ├── reading_detail/                  # 阅读详情 & 进度更新
+│   ├── family/                          # 家庭 & 成员管理
+│   └── settings/                        # 设置
+└── __tests__/                           # Jest 测试
+    ├── api.test.js
+    └── page_logic.test.js
+```
+
+### 3.3 页面流程图
 
 ```
 ┌─────────────┐
@@ -120,130 +221,28 @@ git push --tags
             └──────────────────┘
 ```
 
-### 3.2 模块依赖图
-
-```
-miniprogram/
-├── app.js / app.json                    # 入口 & 全局配置
-├── utils/
-│   ├── config.js                        # BASE_URL 配置（需支持环境区分）
-│   └── api.js                           # HTTP 请求封装 (wx.request + token)
-├── pages/
-│   ├── login/                           # 登录页
-│   ├── home/                            # 主入口（家庭看板）
-│   ├── scan_add/                        # ISBN 扫码添加
-│   ├── reading_list/                    # 阅读记录列表
-│   ├── reading_detail/                  # 阅读详情 & 进度更新
-│   ├── family/                          # 家庭 & 成员管理
-│   └── settings/                        # 设置
-└── __tests__/                           # Jest 测试
-    ├── api.test.js
-    └── page_logic.test.js
-```
-
-### 3.3 API 调用关系
-
-```
-┌──────────────┐         ┌─────────────────────────────────────────────┐
-│  Miniprogram │         │  Backend (FastAPI)                          │
-│              │         │                                             │
-│ login        │────────▶│ POST /v1/auth/wechat/login                  │
-│              │         │ POST /v1/auth/dev/login                     │
-│              │         │                                             │
-│ home         │────────▶│ GET  /v1/families                           │
-│              │         │ GET  /v1/families/{id}/dashboard            │
-│              │         │ GET  /v1/families/{id}/members              │
-│              │         │                                             │
-│ scan_add     │────────▶│ POST /v1/books/resolve  (ISBN 查询)         │
-│              │         │ POST /v1/books          (手动创建)           │
-│              │         │ POST /v1/readings       (创建阅读记录)       │
-│              │         │                                             │
-│ reading_list │────────▶│ GET  /v1/families/{id}/readings             │
-│              │         │                                             │
-│ reading_detail│────────▶│ PATCH /v1/readings/{id}  (更新进度/状态)    │
-│              │         │ DELETE /v1/readings/{id}  (删除记录)         │
-│              │         │                                             │
-│ family       │────────▶│ POST /v1/families                           │
-│              │         │ POST /v1/families/{id}/members              │
-└──────────────┘         └─────────────────────────────────────────────┘
-```
-
 ---
 
 ## 4. 微信小程序发布流程
 
 微信小程序无法完全通过 CI 自动发布（需要微信开发者工具），但可以做到 CI 保障代码质量 + 半自动上传。
 
-### 3.1 当前流程（手动）
+### 4.1 当前流程（手动）
 
 1. 打开**微信开发者工具**，导入 `miniprogram/` 目录
 2. 填写 AppID（在 `project.config.json` 中配置）
 3. 点击**上传**，填写版本号和备注
 4. 在[微信公众平台](https://mp.weixin.qq.com/)提交审核 → 发布
 
-### 3.2 可选的 CI 自动上传（minci）
+### 4.2 可选的 CI 自动上传（miniprogram-ci）
 
-微信官方提供 [miniprogram-ci](https://developers.weixin.qq.com/miniprogram/dev/devtools/ci.html) 工具，可通过 CI 自动上传体验版。
-
-**前置条件**:
-- 在微信公众平台获取 **CI 上传密钥**（开发管理 → 开发设置 → 代码上传）
-- 下载密钥文件（`.private.key`），**不要提交到 git**
-
-**步骤**:
-
-```bash
-# 1. 安装 miniprogram-ci
-cd miniprogram
-npm install --save-dev miniprogram-ci
-
-# 2. 将密钥文件放到安全位置（不提交）
-# 放在 miniprogram/.private.key 或通过 GitHub Secrets 传入
-
-# 3. 在 CI 中添加 workflow（可选，见下方示例）
-```
-
-**GitHub Actions 示例**（添加到 `.github/workflows/miniprogram-ci.yml`）:
-
-```yaml
-name: Miniprogram Upload
-
-on:
-  push:
-    tags:
-      - "v*"
-
-jobs:
-  upload:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        working-directory: miniprogram
-        run: npm ci
-
-      - name: Upload to WeChat
-        working-directory: miniprogram
-        env:
-          WX_CI_KEY: ${{ secrets.WECHAT_CI_KEY }}
-          WX_APPID: ${{ secrets.WECHAT_APP_ID }}
-        run: |
-          # 使用 miniprogram-ci 上传体验版
-          # 需要先在项目中配置好 miniprogram-ci
-          echo "Upload step - configure miniprogram-ci as needed"
-```
-
-> **注意**: 需要在 GitHub Settings → Secrets 中配置 `WECHAT_CI_KEY` 和 `WECHAT_APP_ID`。
+详见 [2.3 小程序自动上传（待实现）](#23-小程序自动上传待实现) 中的 workflow 示例。
 
 ---
 
 ## 5. 部署方案
 
-### 4.1 方案对比
+### 5.1 方案对比
 
 | 方案 | 复杂度 | 成本 | 适用场景 |
 |------|--------|------|----------|
@@ -251,7 +250,7 @@ jobs:
 | 自有云服务器 (ECS/VPS) | 中 | 中 | 已有服务器，需要完全控制 |
 | 容器编排 (K8s) | 高 | 高 | 多实例、高可用场景 |
 
-### 4.2 方案 A: PaaS 部署（推荐 MVP）
+### 5.2 方案 A: PaaS 部署（推荐 MVP）
 
 以 Railway 为例：
 
@@ -275,7 +274,7 @@ railway variables set WECHAT_APP_SECRET=...
 railway up
 ```
 
-### 4.3 方案 B: 自有服务器 + Docker
+### 5.3 方案 B: 自有服务器 + Docker
 
 ```bash
 # 1. 在服务器上拉取镜像
@@ -322,7 +321,7 @@ server {
 }
 ```
 
-### 4.4 部署后 checklist
+### 5.4 部署后 checklist
 
 - [ ] `APP_ENV=prod`, `APP_DEBUG=0`
 - [ ] 微信正式环境密钥已配置
@@ -346,7 +345,7 @@ server {
    ```bash
    pip install psycopg[binary]
    ```
-3. 在 `backend/app/db/database.py` 中添加 `SQLModel.metadata.create_all(engine)`（已存在）
+3. 在 `backend/app/db/database.py` 中 `SQLModel.metadata.create_all(engine)` 会自动建表
 4. 对于已有数据的迁移，考虑使用 `sqlite3` 导出 + `pgloader` 导入
 
 > **注意**: 生产环境建议引入 alembic 做 schema 迁移管理。
@@ -355,7 +354,7 @@ server {
 
 ## 7. Release 工作流扩展（TODO）
 
-当前 release workflow 只构建 Docker 镜像，部署逻辑已预留（见 `release.yml` 末尾注释部分）。选定部署方案后，取消注释并填入具体步骤即可。
+当前 release workflow 只构建 Docker 镜像，部署逻辑已预留（见 `.github/workflows/release.yml` 末尾注释部分）。选定部署方案后，取消注释并填入具体步骤即可。
 
 可选扩展：
 - 部署成功后自动发送 Slack/飞书通知
