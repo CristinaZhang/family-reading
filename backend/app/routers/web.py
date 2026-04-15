@@ -405,12 +405,11 @@ def create_readings_batch(
     return _htmx_redirect(request, f"/web/families/{family_id}/readings")
 
 
-@router.patch("/web/families/{family_id}/readings/batch")
-def patch_readings_batch(
+@router.post("/web/families/{family_id}/readings/batch/finish")
+def finish_readings_batch(
     request: Request,
     family_id: int,
     reading_ids: str = Form(default=""),
-    status_val: Optional[str] = Form(default=None),
     finished_on: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
 ) -> HTMLResponse:
@@ -422,8 +421,7 @@ def patch_readings_batch(
         r = session.exec(select(Reading).where(Reading.id == rid)).first()
         if not r:
             continue
-        if status_val:
-            r.status = ReadingStatus(status_val)
+        r.status = ReadingStatus.finished
         if finished_on:
             r.finished_on = date.fromisoformat(finished_on)
         r.updated_at = datetime.utcnow()

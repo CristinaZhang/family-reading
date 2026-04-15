@@ -80,7 +80,7 @@
   </thead>
   <tbody>
     {% for r in readings %}
-    <tr>
+    <tr id="reading-row-{{ r.id }}">
       <td><input type="checkbox" class="reading-cb" data-id="{{ r.id }}"
                  {% if r.status.value == "finished" %}disabled{% endif %}></td>
       <td>
@@ -209,10 +209,9 @@ async function bulkMarkFinished(familyId) {
   if (!confirm('确定标记选中的 ' + ids.length + ' 条记录为读完吗？')) return;
   const fd = new FormData();
   fd.append('reading_ids', ids.join(','));
-  fd.append('status_val', 'finished');
   fd.append('finished_on', new Date().toISOString().slice(0, 10));
-  const resp = await fetch(`/web/families/${familyId}/readings/batch`, {
-    method: 'PATCH', body: fd
+  const resp = await fetch(`/web/families/${familyId}/readings/batch/finish`, {
+    method: 'POST', body: fd
   });
   if (resp.ok || resp.status === 302) window.location.href = `/web/families/${familyId}/readings`;
 }
