@@ -350,8 +350,9 @@ def patch_reading_htmx(
     family_id: int,
     reading_id: int,
     status_val: Optional[str] = Form(default=None),
-    progress_value: Optional[int] = Form(default=None),
+    progress_value: Optional[str] = Form(default=None),
     finished_on: Optional[str] = Form(default=None),
+    note: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
 ) -> HTMLResponse:
     user = require_web_user(request, session)
@@ -363,10 +364,12 @@ def patch_reading_htmx(
 
     if status_val:
         r.status = ReadingStatus(status_val)
-    if progress_value is not None:
-        r.progress_value = progress_value
+    if progress_value is not None and progress_value.strip():
+        r.progress_value = int(progress_value)
     if finished_on:
         r.finished_on = date.fromisoformat(finished_on)
+    if note is not None:
+        r.note = note.strip() or None
 
     r.updated_at = datetime.utcnow()
     session.add(r)

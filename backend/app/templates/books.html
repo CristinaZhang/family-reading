@@ -34,8 +34,16 @@
 {% if books %}
 <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
   <label><input type="checkbox" id="select-all-books" onchange="toggleAllBooks(this)"> 全选</label>
+  <select id="bulk-reading-member" style="display:none;">
+    <option value="">选择成员</option>
+    {% for m in members %}
+    <option value="{{ m.id }}">{{ m.display_name }}</option>
+    {% endfor %}
+  </select>
   <button type="button" class="btn btn-danger btn-small" id="bulk-book-delete-btn" disabled
           onclick="bulkDeleteBooks({{ family_id }})">批量删除</button>
+  <button type="button" class="btn btn-success btn-small" id="bulk-add-reading-btn" disabled
+          onclick="bulkAddToReading({{ family_id }})">加入阅读记录</button>
 </div>
 <table class="table">
   <thead>
@@ -52,10 +60,10 @@
     {% for b in books %}
     <tr id="book-row-{{ b.id }}">
       <td><input type="checkbox" class="book-cb" data-id="{{ b.id }}"></td>
-      <td class="book-title" id="book-title-{{ b.id }}">{{ b.title }}</td>
-      <td id="book-authors-{{ b.id }}">{{ b.authors_json|replace('[', '')|replace(']', '')|replace('"', '') }}</td>
+      <td class="book-title">{{ b.title }}</td>
+      <td>{{ b.authors_json|replace('[', '')|replace(']', '')|replace('"', '') }}</td>
       <td id="book-publisher-{{ b.id }}">{{ b.publisher or '-' }}</td>
-      <td class="isbn" id="book-isbn-{{ b.id }}">{{ b.isbn13 or '-' }}</td>
+      <td class="isbn">{{ b.isbn13 or '-' }}</td>
       <td class="actions">
         <button class="btn btn-sm btn-edit" onclick="editBook({{ family_id }}, {{ b.id }}, '{{ b.title }}', '{{ b.authors_json|replace("'", "\\'") }}', '{{ b.publisher or '' }}', '{{ b.isbn13 or '' }}')">编辑</button>
         <button class="btn btn-sm btn-danger" onclick="deleteBook({{ family_id }}, {{ b.id }})">删除</button>
@@ -72,7 +80,7 @@
 <div id="edit-book-modal" class="modal" style="display:none;">
   <div class="modal-backdrop" onclick="closeEditModal()"></div>
   <div class="modal-content">
-    <h3 id="edit-book-title">编辑书籍</h3>
+    <h3>编辑书籍</h3>
     <form id="edit-book-form" onsubmit="saveBook(event)">
       <input type="hidden" id="edit-book-id">
       <input type="hidden" id="edit-family-id">
@@ -100,8 +108,13 @@ document.addEventListener('change', function(e) {
 });
 function updateBookBulkBtn() {
   const n = document.querySelectorAll('.book-cb:checked').length;
-  const btn = document.getElementById('bulk-book-delete-btn');
-  if (btn) { btn.disabled = n === 0; btn.textContent = '批量删除 (' + n + ')'; }
+  const delBtn = document.getElementById('bulk-book-delete-btn');
+  const addBtn = document.getElementById('bulk-add-reading-btn');
+  const memberSel = document.getElementById('bulk-reading-member');
+  const has = n > 0;
+  if (delBtn) { delBtn.disabled = !has; delBtn.textContent = '批量删除 (' + n + ')'; }
+  if (addBtn) addBtn.disabled = !has;
+  memberSel.style.display = has ? 'inline-block' : 'none';
 }
 function deleteBook(familyId, bookId) {
   if (!confirm('确认删除？')) return;
@@ -116,6 +129,21 @@ async function bulkDeleteBooks(familyId) {
     await fetch(`/web/families/${familyId}/books/${id}`, { method: 'DELETE' });
   }
   window.location.href = `/web/families/${familyId}/books`;
+}
+async function bulkAddToReading(familyId) {
+  const memberSel = document.getElementById('bulk-reading-member');
+  const memberId = memberSel.value;
+  if (!memberId) { alert('请先选择成员'); memberSel.focus(); return; }
+  const ids = [...document.querySelectorAll('.book-cb:checked')].map(c => c.dataset.id);
+  if (!confirm('将 ' + ids.length + ' 本书加入所选成员的阅读记录（状态：在读）？')) return;
+  for (const bookId of ids) {
+    const fd = new FormData();
+    fd.append('member_id', memberId);
+    fd.append('book_meta_id', bookId);
+    fd.append('reading_status', 'reading');
+    await fetch(`/web/families/${familyId}/readings`, { method: 'POST', body: fd });
+  }
+  window.location.href = `/web/families/${familyId}/readings`;
 }
 function editBook(familyId, bookId, title, authorsJson, publisher, isbn) {
   document.getElementById('edit-book-id').value = bookId;
