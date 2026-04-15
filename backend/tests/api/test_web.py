@@ -315,6 +315,15 @@ def test_create_member_empty_name(logged_in_client, test_family):
     assert resp.status_code == 422
 
 
+def test_delete_member(logged_in_client, test_family, test_member):
+    """DELETE removes a member and redirects."""
+    resp = logged_in_client.delete(
+        f"/web/families/{test_family.id}/members/{test_member.id}",
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
 # --- Export tests ---
 
 def test_export_readings_csv(logged_in_client, test_family, test_reading, test_member, test_book):

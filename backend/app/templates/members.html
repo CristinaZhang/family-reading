@@ -19,6 +19,7 @@
     <tr>
       <th>名称</th>
       <th>加入时间</th>
+      <th>操作</th>
     </tr>
   </thead>
   <tbody>
@@ -26,6 +27,13 @@
     <tr>
       <td>{{ m.display_name }}</td>
       <td>{{ m.created_at.strftime("%Y-%m-%d") }}</td>
+      <td>
+        <button class="btn btn-danger btn-small"
+                hx-delete="/web/families/{{ family_id }}/members/{{ m.id }}"
+                hx-confirm="确定删除成员 {{ m.display_name }} 吗？"
+                hx-target="body"
+                hx-push-url="/web/families/{{ family_id }}/members">删除</button>
+      </td>
     </tr>
     {% endfor %}
   </tbody>
