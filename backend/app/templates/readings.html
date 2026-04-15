@@ -56,9 +56,17 @@
 
 <!-- 阅读记录列表 -->
 {% if readings %}
+<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+  <label><input type="checkbox" id="select-all-readings" onchange="toggleAllReadings(this)"> 全选</label>
+  <button type="button" class="btn btn-success btn-small" id="bulk-finish-btn" disabled
+          onclick="bulkMarkFinished({{ family_id }})">批量标记读完</button>
+  <button type="button" class="btn btn-danger btn-small" id="bulk-reading-delete-btn" disabled
+          onclick="bulkDeleteReadings({{ family_id }})">批量删除</button>
+</div>
 <table class="table">
   <thead>
     <tr>
+      <th>选择</th>
       <th>书名</th>
       <th>成员</th>
       <th>状态</th>
@@ -73,6 +81,8 @@
   <tbody>
     {% for r in readings %}
     <tr>
+      <td><input type="checkbox" class="reading-cb" data-id="{{ r.id }}"
+                 {% if r.status.value == "finished" %}disabled{% endif %}></td>
       <td>
         {% if r.book_meta_id in book_map %}
           {{ book_map[r.book_meta_id].title }}
@@ -140,6 +150,20 @@
 
 {% block extra_js %}
 <script>
+function toggleAllReadings(cb) {
+  document.querySelectorAll('.reading-cb:not([disabled])').forEach(c => c.checked = cb.checked);
+  updateReadingBulkBtn();
+}
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('reading-cb')) updateReadingBulkBtn();
+});
+function updateReadingBulkBtn() {
+  const n = document.querySelectorAll('.reading-cb:checked').length;
+  const finishBtn = document.getElementById('bulk-finish-btn');
+  const deleteBtn = document.getElementById('bulk-reading-delete-btn');
+  if (finishBtn) { finishBtn.disabled = n === 0; finishBtn.textContent = '批量标记读完 (' + n + ')'; }
+  if (deleteBtn) { deleteBtn.disabled = n === 0; deleteBtn.textContent = '批量删除 (' + n + ')'; }
+}
 function editReading(familyId, readingId, status, progress, finished, note) {
   document.getElementById('edit-reading-id').value = readingId;
   document.getElementById('edit-reading-family-id').value = familyId;
@@ -178,6 +202,28 @@ async function saveReading(e) {
     method: 'PATCH', body: fd
   });
   if (resp.ok || resp.status === 302) window.location.reload();
+}
+async function bulkMarkFinished(familyId) {
+  const ids = [...document.querySelectorAll('.reading-cb:checked')].map(c => c.dataset.id);
+  if (!ids.length) return;
+  if (!confirm('确定标记选中的 ' + ids.length + ' 条记录为读完吗？')) return;
+  const fd = new FormData();
+  fd.append('reading_ids', ids.join(','));
+  fd.append('status_val', 'finished');
+  fd.append('finished_on', new Date().toISOString().slice(0, 10));
+  const resp = await fetch(`/web/families/${familyId}/readings/batch`, {
+    method: 'PATCH', body: fd
+  });
+  if (resp.ok || resp.status === 302) window.location.href = `/web/families/${familyId}/readings`;
+}
+async function bulkDeleteReadings(familyId) {
+  const ids = [...document.querySelectorAll('.reading-cb:checked')].map(c => c.dataset.id);
+  if (!ids.length) return;
+  if (!confirm('确定删除选中的 ' + ids.length + ' 条阅读记录吗？')) return;
+  for (const id of ids) {
+    await fetch(`/web/families/${familyId}/readings/${id}`, { method: 'DELETE' });
+  }
+  window.location.href = `/web/families/${familyId}/readings`;
 }
 </script>
 {% endblock %}

@@ -378,6 +378,61 @@ def patch_reading_htmx(
     return _htmx_redirect(request, f"/web/families/{family_id}/readings")
 
 
+@router.post("/web/families/{family_id}/readings/batch")
+def create_readings_batch(
+    request: Request,
+    family_id: int,
+    member_id: int = Form(),
+    book_meta_ids: str = Form(default=""),
+    reading_status: str = Form(default="reading"),
+    session: Session = Depends(get_session),
+) -> HTMLResponse:
+    user = require_web_user(request, session)
+    require_family_owner(session, family_id, user.id)
+
+    rs = ReadingStatus(reading_status) if reading_status else ReadingStatus.reading
+    ids = [int(x) for x in book_meta_ids.split(",") if x.strip()]
+    for book_id in ids:
+        r = Reading(
+            family_id=family_id,
+            member_id=member_id,
+            book_meta_id=book_id,
+            status=rs,
+        )
+        session.add(r)
+    session.commit()
+
+    return _htmx_redirect(request, f"/web/families/{family_id}/readings")
+
+
+@router.patch("/web/families/{family_id}/readings/batch")
+def patch_readings_batch(
+    request: Request,
+    family_id: int,
+    reading_ids: str = Form(default=""),
+    status_val: Optional[str] = Form(default=None),
+    finished_on: Optional[str] = Form(default=None),
+    session: Session = Depends(get_session),
+) -> HTMLResponse:
+    user = require_web_user(request, session)
+    require_family_owner(session, family_id, user.id)
+
+    ids = [int(x) for x in reading_ids.split(",") if x.strip()]
+    for rid in ids:
+        r = session.exec(select(Reading).where(Reading.id == rid)).first()
+        if not r:
+            continue
+        if status_val:
+            r.status = ReadingStatus(status_val)
+        if finished_on:
+            r.finished_on = date.fromisoformat(finished_on)
+        r.updated_at = datetime.utcnow()
+        session.add(r)
+    session.commit()
+
+    return _htmx_redirect(request, f"/web/families/{family_id}/readings")
+
+
 @router.delete("/web/families/{family_id}/readings/{reading_id}")
 def delete_reading_htmx(
     request: Request,
