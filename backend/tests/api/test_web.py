@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -246,6 +248,44 @@ def test_patch_reading(logged_in_client, test_reading, test_family):
     assert _is_redirect(resp.status_code)
 
 
+def test_patch_reading_with_empty_fields(logged_in_client, test_reading, test_family):
+    """PATCH with empty form fields should not clear existing progress_value."""
+    resp = logged_in_client.patch(
+        f"/web/families/{test_family.id}/readings/{test_reading.id}",
+        data={"status_val": "finished", "progress_value": ""},
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
+# --- Readings batch tests ---
+
+def test_create_readings_batch(logged_in_client, test_family, test_member, test_book):
+    """POST /readings/batch creates multiple readings."""
+    resp = logged_in_client.post(
+        f"/web/families/{test_family.id}/readings/batch",
+        data={
+            "member_id": test_member.id,
+            "book_meta_ids": f"{test_book.id}",
+            "reading_status": "reading",
+        },
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
+def test_finish_readings_batch(logged_in_client, test_family, test_reading):
+    """POST /readings/batch/finish marks multiple readings as finished."""
+    resp = logged_in_client.post(
+        f"/web/families/{test_family.id}/readings/batch/finish",
+        data={
+            "reading_ids": f"{test_reading.id}",
+        },
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
 # --- Books tests ---
 
 def test_books_page_empty(logged_in_client, test_family):
@@ -280,6 +320,43 @@ def test_delete_book(logged_in_client, test_family, test_book):
     """DELETE removes a book and redirects."""
     resp = logged_in_client.delete(
         f"/web/families/{test_family.id}/books/{test_book.id}",
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
+def test_create_books_batch(logged_in_client, test_family):
+    """POST /books/batch creates multiple books."""
+    resp = logged_in_client.post(
+        f"/web/families/{test_family.id}/books/batch",
+        data={
+            "batch_input": "球状闪电,刘慈欣\n三体\n",
+        },
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
+def test_patch_book(logged_in_client, test_family, test_book):
+    """PATCH updates book metadata."""
+    resp = logged_in_client.patch(
+        f"/web/families/{test_family.id}/books/{test_book.id}",
+        data={
+            "title": "新书名",
+            "authors": "新作者,另一位",
+            "publisher": "某出版社",
+            "isbn": "9787536692626",
+        },
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
+def test_patch_book_with_empty_fields(logged_in_client, test_family, test_book):
+    """PATCH book with empty fields should not erase existing data."""
+    resp = logged_in_client.patch(
+        f"/web/families/{test_family.id}/books/{test_book.id}",
+        data={"title": "", "authors": "", "publisher": "", "isbn": ""},
         follow_redirects=False,
     )
     assert _is_redirect(resp.status_code)

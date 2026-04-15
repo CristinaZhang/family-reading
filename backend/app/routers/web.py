@@ -144,7 +144,7 @@ def login_submit(
     user = session.exec(select(User).where(User.openid == openid)).first()
     if not user:
         return _template_response(request, "login.html", {"error": "用户不存在，请确认 ENABLE_DEV_LOGIN=1"})
-    response = RedirectResponse(url="/web/", status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse(url="/web/", status_code=status.HTTP_303_SEE_OTHER)
     _set_session(response, user.id)
     return response
 
