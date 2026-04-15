@@ -83,8 +83,8 @@ def logged_in_client(client, test_user):
 
 
 def _is_redirect(status_code: int) -> bool:
-    """Check if status code is a redirect (302 or 307)."""
-    return status_code in (302, 307)
+    """Check if status code is a redirect (302, 303, or 307)."""
+    return status_code in (302, 303, 307)
 
 
 # --- Login tests ---

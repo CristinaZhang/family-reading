@@ -14,31 +14,58 @@
 
 <!-- 成员列表 -->
 {% if members %}
-<table class="table">
-  <thead>
-    <tr>
-      <th>名称</th>
-      <th>加入时间</th>
-      <th>操作</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for m in members %}
-    <tr>
-      <td>{{ m.display_name }}</td>
-      <td>{{ m.created_at.strftime("%Y-%m-%d") }}</td>
-      <td>
-        <button class="btn btn-danger btn-small"
-                hx-delete="/web/families/{{ family_id }}/members/{{ m.id }}"
-                hx-confirm="确定删除成员 {{ m.display_name }} 吗？"
-                hx-target="body"
-                hx-push-url="/web/families/{{ family_id }}/members">删除</button>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<form id="members-form" style="margin-top:10px;">
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+    <label><input type="checkbox" id="select-all-members" onchange="toggleAllMembers(this)"> 全选</label>
+    <button type="button" class="btn btn-danger btn-small" id="bulk-delete-btn" disabled
+            onclick="bulkDeleteMembers({{ family_id }})">批量删除</button>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>选择</th>
+        <th>名称</th>
+        <th>加入时间</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in members %}
+      <tr>
+        <td><input type="checkbox" class="member-cb" data-id="{{ m.id }}"></td>
+        <td>{{ m.display_name }}</td>
+        <td>{{ m.created_at.strftime("%Y-%m-%d") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
 {% else %}
 <p class="empty">暂无成员，请先添加家庭成员</p>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAllMembers(cb) {
+  document.querySelectorAll('.member-cb').forEach(c => c.checked = cb.checked);
+  updateBulkBtn();
+}
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('member-cb')) updateBulkBtn();
+});
+function updateBulkBtn() {
+  const n = document.querySelectorAll('.member-cb:checked').length;
+  const btn = document.getElementById('bulk-delete-btn');
+  if (btn) { btn.disabled = n === 0; btn.textContent = '批量删除 (' + n + ')'; }
+}
+async function bulkDeleteMembers(familyId) {
+  const ids = [...document.querySelectorAll('.member-cb:checked')].map(c => c.dataset.id);
+  if (!ids.length) return;
+  if (!confirm('确定删除选中的 ' + ids.length + ' 个成员吗？')) return;
+  for (const id of ids) {
+    await fetch(`/web/families/${familyId}/members/${id}`, { method: 'DELETE' });
+  }
+  window.location.href = `/web/families/${familyId}/members`;
+}
+</script>
 {% endblock %}
