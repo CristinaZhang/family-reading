@@ -160,6 +160,26 @@ def web_root(
     return RedirectResponse(url=f"/web/families/{families[0].id}/dashboard")
 
 
+@router.post("/web/families")
+def create_family_htmx(
+    request: Request,
+    name: str = Form(default="我家"),
+    session: Session = Depends(get_session),
+) -> Response:
+    user = _get_user_from_cookie(request, session)
+    if not user:
+        return RedirectResponse(url="/web/login")
+    name = name.strip() or "我家"
+    fam = Family(name=name, owner_user_id=user.id)
+    session.add(fam)
+    session.commit()
+    session.refresh(fam)
+    # Auto-create a default member "我"
+    session.add(FamilyMember(family_id=fam.id, display_name="我"))
+    session.commit()
+    return RedirectResponse(url=f"/web/families/{fam.id}/dashboard", status_code=status.HTTP_302_FOUND)
+
+
 @router.get("/web/families/{family_id}/dashboard")
 def dashboard_page(
     request: Request,

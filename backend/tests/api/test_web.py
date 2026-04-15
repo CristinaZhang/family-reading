@@ -148,6 +148,27 @@ def test_logout(logged_in_client):
     assert resp.headers["location"] == "/web/login"
 
 
+def test_create_family_from_no_family_page(logged_in_client):
+    """POST /web/families creates a family + default member and redirects to dashboard."""
+    resp = logged_in_client.post(
+        "/web/families",
+        data={"name": "测试家庭"},
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+    assert "/dashboard" in resp.headers["location"]
+
+
+def test_create_family_default_name(logged_in_client):
+    """POST /web/families with empty name uses default '我家'."""
+    resp = logged_in_client.post(
+        "/web/families",
+        data={"name": ""},
+        follow_redirects=False,
+    )
+    assert _is_redirect(resp.status_code)
+
+
 # --- Dashboard tests ---
 
 def test_dashboard_page(logged_in_client, test_family, test_member):
