@@ -8,7 +8,7 @@ import json
 from datetime import date, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeSerializer, BadSignature
@@ -64,11 +64,11 @@ def _get_user_from_cookie(request: Request, session: Session) -> Optional[AuthUs
     return AuthUser(id=user.id, openid=user.openid)
 
 
-def require_web_user(
+def _get_web_user_or_redirect(
     request: Request,
-    session: Session = Depends(get_session),
-) -> AuthUser:
-    """Redirect to login if no valid session cookie."""
+    session: Session,
+) -> AuthUser | RedirectResponse:
+    """Get web user from cookie or return a redirect to login."""
     user = _get_user_from_cookie(request, session)
     if not user:
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
@@ -76,37 +76,64 @@ def require_web_user(
     return user
 
 
-# --- Template setup ---
-templates = Jinja2Templates(directory="app/templates")
+def require_web_user(
+    request: Request,
+    session: Session = Depends(get_session),
+) -> AuthUser:
+    """Raise HTTPException if not authenticated.
 
+    For page routes that need a redirect instead, use _get_web_user_or_redirect() inline.
+    """
+    user = _get_user_from_cookie(request, session)
+    if not user:
+        raise HTTPException(status_code=401, detail="not authenticated")
+    request.state.web_user = user
+    return user
+
+
+# --- Template setup ---
+from jinja2 import Environment, FileSystemLoader
 
 def _status_label(value: str) -> str:
     return _STATUS_LABELS.get(value, value)
 
 
-templates.env.globals["status_label"] = _status_label
-templates.env.globals["now"] = datetime.utcnow
+_jinja_env = Environment(
+    loader=FileSystemLoader("app/templates"),
+    autoescape=True,
+)
+_jinja_env.globals["status_label"] = _status_label
+
+templates = Jinja2Templates(env=_jinja_env)
+
+
+def _template_response(request: Request, name: str, context: dict | None = None, **kwargs):
+    """Wrapper for Starlette 1.0+ TemplateResponse (request is first arg, not in context)."""
+    if context is None:
+        context = {}
+    context["request"] = request
+    return templates.TemplateResponse(request=request, name=name, context=context, **kwargs)
 
 
 # --- Page routes ---
 
 @router.get("/web/login")
 def login_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("login.html", {"request": request})
+    return _template_response(request, "login.html")
 
 
 @router.post("/web/login")
 def login_submit(
     request: Request,
-    openid: str = "",
+    openid: str = Form(default=""),
     session: Session = Depends(get_session),
 ) -> Response:
     openid = openid.strip()
     if not openid:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "请输入 openid"})
+        return _template_response(request, "login.html", {"error": "请输入 openid"})
     user = session.exec(select(User).where(User.openid == openid)).first()
     if not user:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "用户不存在，请确认 ENABLE_DEV_LOGIN=1"})
+        return _template_response(request, "login.html", {"error": "用户不存在，请确认 ENABLE_DEV_LOGIN=1"})
     response = RedirectResponse(url="/web/", status_code=status.HTTP_302_FOUND)
     _set_session(response, user.id)
     return response
@@ -129,7 +156,7 @@ def web_root(
         return RedirectResponse(url="/web/login")
     families = session.exec(select(Family).where(Family.owner_user_id == user.id)).all()
     if not families:
-        return templates.TemplateResponse("no_family.html", {"request": request})
+        return _template_response(request, "no_family.html")
     return RedirectResponse(url=f"/web/families/{families[0].id}/dashboard")
 
 
@@ -193,7 +220,8 @@ def dashboard_page(
     member_names = [m.display_name for m in members]
     member_finished = [counts[m.id]["finished"] for m in members]
 
-    return templates.TemplateResponse(
+    return _template_response(
+        request,
         "dashboard.html",
         {
             "request": request,
@@ -240,7 +268,8 @@ def readings_page(
     books = session.exec(select(BookMeta).where(BookMeta.id.in_(book_ids))).all()  # type: ignore[arg-type]
     book_map = {b.id: b for b in books}
 
-    return templates.TemplateResponse(
+    return _template_response(
+        request,
         "readings.html",
         {
             "request": request,
@@ -260,11 +289,11 @@ def readings_page(
 def create_reading_htmx(
     request: Request,
     family_id: int,
-    member_id: int,
-    book_meta_id: int,
-    reading_status: str = "reading",
-    started_on: Optional[str] = None,
-    note: Optional[str] = None,
+    member_id: int = Form(),
+    book_meta_id: int = Form(),
+    reading_status: str = Form(default="reading"),
+    started_on: Optional[str] = Form(default=None),
+    note: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
 ) -> HTMLResponse:
     user = require_web_user(request, session)
@@ -291,9 +320,9 @@ def patch_reading_htmx(
     request: Request,
     family_id: int,
     reading_id: int,
-    status_val: Optional[str] = None,
-    progress_value: Optional[int] = None,
-    finished_on: Optional[str] = None,
+    status_val: Optional[str] = Form(default=None),
+    progress_value: Optional[int] = Form(default=None),
+    finished_on: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
 ) -> HTMLResponse:
     user = require_web_user(request, session)
@@ -348,7 +377,8 @@ def books_page(
     books = session.exec(select(BookMeta).order_by(BookMeta.created_at.desc())).all()
     members = session.exec(select(FamilyMember).where(FamilyMember.family_id == family_id)).all()
 
-    return templates.TemplateResponse(
+    return _template_response(
+        request,
         "books.html",
         {
             "request": request,
@@ -363,9 +393,9 @@ def books_page(
 def create_book_htmx(
     request: Request,
     family_id: int,
-    title: str,
-    authors: str = "",
-    isbn: Optional[str] = None,
+    title: str = Form(),
+    authors: str = Form(default=""),
+    isbn: Optional[str] = Form(default=None),
     session: Session = Depends(get_session),
 ) -> HTMLResponse:
     user = require_web_user(request, session)
@@ -414,7 +444,8 @@ def members_page(
 
     members = session.exec(select(FamilyMember).where(FamilyMember.family_id == family_id)).all()
 
-    return templates.TemplateResponse(
+    return _template_response(
+        request,
         "members.html",
         {
             "request": request,
@@ -428,7 +459,7 @@ def members_page(
 def create_member_htmx(
     request: Request,
     family_id: int,
-    display_name: str,
+    display_name: str = Form(),
     session: Session = Depends(get_session),
 ) -> HTMLResponse:
     user = require_web_user(request, session)

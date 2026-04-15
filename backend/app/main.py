@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.status import HTTP_302_FOUND
 
 from app.config import HealthResponse, settings
 from app.db.database import init_db
@@ -72,6 +74,13 @@ def create_app() -> FastAPI:
     @app.get("/health", response_model=HealthResponse)
     def health() -> HealthResponse:
         return HealthResponse(status="ok")
+
+    @app.exception_handler(HTTPException)
+    async def web_auth_exception_handler(request: Request, exc: HTTPException):
+        """Convert 401 on /web/* paths to HTML redirect to login."""
+        if exc.status_code == 401 and request.url.path.startswith("/web/"):
+            return RedirectResponse(url="/web/login", status_code=HTTP_302_FOUND)
+        raise exc
 
     app.include_router(auth.router, prefix="/v1")
     app.include_router(families.router, prefix="/v1")
