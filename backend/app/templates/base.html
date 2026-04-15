@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}家庭阅读{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/web.css">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="/static/js/web.js" defer></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <a href="/web/">家庭阅读</a>
+    </div>
+    {% if family_id %}
+    <div class="nav-links">
+      <a href="/web/families/{{ family_id }}/dashboard" class="{% if nav == 'dashboard' %}active{% endif %}">看板</a>
+      <a href="/web/families/{{ family_id }}/readings" class="{% if nav == 'readings' %}active{% endif %}">阅读记录</a>
+      <a href="/web/families/{{ family_id }}/books" class="{% if nav == 'books' %}active{% endif %}">书籍</a>
+      <a href="/web/families/{{ family_id }}/members" class="{% if nav == 'members' %}active{% endif %}">成员</a>
+      <div class="nav-dropdown">
+        <button class="nav-drop-btn">导出</button>
+        <div class="nav-drop-content">
+          <a href="/web/families/{{ family_id }}/export/readings.csv">阅读记录 CSV</a>
+          <a href="/web/families/{{ family_id }}/export/books.csv">书籍 CSV</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="nav-end">
+      <a href="/web/logout">退出</a>
+    </div>
+  </nav>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

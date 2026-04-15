@@ -9,18 +9,12 @@ from sqlmodel import Session, select
 
 from app.auth import AuthUser, get_current_user
 from app.db.database import get_session
-from app.db.models import Family, FamilyMember, Reading, ReadingStatus
+from app.db.models import FamilyMember, Reading, ReadingStatus
 
 router = APIRouter(tags=["dashboard"])
 
 
-def _require_family_owner(session: Session, family_id: int, user_id: int) -> Family:
-    fam = session.exec(select(Family).where(Family.id == family_id)).first()
-    if not fam:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="family not found")
-    if fam.owner_user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not family owner")
-    return fam
+from app.utils.family_auth import require_family_owner
 
 
 class MemberDashboard(BaseModel):
@@ -44,7 +38,7 @@ def dashboard(
     session: Session = Depends(get_session),
     user: AuthUser = Depends(get_current_user),
 ) -> DashboardResponse:
-    _require_family_owner(session, family_id, user.id)
+    require_family_owner(session, family_id, user.id)
 
     members = session.exec(select(FamilyMember).where(FamilyMember.family_id == family_id)).all()
     member_map = {m.id: m for m in members}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set nav = "members" %}
+
+{% block title %}成员管理{% endblock %}
+
+{% block content %}
+<h1 class="page-title">成员管理</h1>
+
+<!-- 添加成员表单 -->
+<form method="post" action="/web/families/{{ family_id }}/members" class="add-member-form">
+  <input type="text" name="display_name" placeholder="成员名称" required>
+  <button type="submit" class="btn btn-primary">添加成员</button>
+</form>
+
+<!-- 成员列表 -->
+{% if members %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>名称</th>
+      <th>加入时间</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in members %}
+    <tr>
+      <td>{{ m.display_name }}</td>
+      <td>{{ m.created_at.strftime("%Y-%m-%d") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">暂无成员，请先添加家庭成员</p>
+{% endif %}
+{% endblock %}

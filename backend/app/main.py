@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import HealthResponse, settings
 from app.db.database import init_db
-from app.routers import auth, book_copies, books, dashboard, families, readings
+from app.routers import auth, book_copies, books, dashboard, families, readings, web
 
 
 def create_app() -> FastAPI:
@@ -79,6 +79,7 @@ def create_app() -> FastAPI:
     app.include_router(book_copies.router, prefix="/v1")
     app.include_router(readings.router, prefix="/v1")
     app.include_router(dashboard.router, prefix="/v1")
+    app.include_router(web.router)
 
     return app
 

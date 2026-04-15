@@ -10,18 +10,12 @@ from sqlmodel import Session, select
 
 from app.auth import AuthUser, get_current_user
 from app.db.database import get_session
-from app.db.models import BookCopy, BookMeta, Family, FamilyMember, ProgressType, Reading, ReadingStatus
+from app.db.models import BookCopy, BookMeta, FamilyMember, ProgressType, Reading, ReadingStatus
+
+from app.utils.family_auth import require_family_owner
+
 
 router = APIRouter(tags=["readings"])
-
-
-def _require_family_owner(session: Session, family_id: int, user_id: int) -> Family:
-    fam = session.exec(select(Family).where(Family.id == family_id)).first()
-    if not fam:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="family not found")
-    if fam.owner_user_id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not family owner")
-    return fam
 
 
 class BookCopyCreate(BaseModel):
@@ -79,7 +73,7 @@ def create_reading(
     session: Session = Depends(get_session),
     user: AuthUser = Depends(get_current_user),
 ) -> ReadingResponse:
-    _require_family_owner(session, req.family_id, user.id)
+    require_family_owner(session, req.family_id, user.id)
 
     member = session.exec(
         select(FamilyMember).where(FamilyMember.id == req.member_id, FamilyMember.family_id == req.family_id)
@@ -173,7 +167,7 @@ def patch_reading(
     r = session.exec(select(Reading).where(Reading.id == reading_id)).first()
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="reading not found")
-    _require_family_owner(session, r.family_id, user.id)
+    require_family_owner(session, r.family_id, user.id)
 
     if req.status is not None:
         r.status = req.status
@@ -232,7 +226,7 @@ def get_reading(
     r = session.exec(select(Reading).where(Reading.id == reading_id)).first()
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="reading not found")
-    _require_family_owner(session, r.family_id, user.id)
+    require_family_owner(session, r.family_id, user.id)
 
     book = session.exec(select(BookMeta).where(BookMeta.id == r.book_meta_id)).first()
     book_brief = BookMetaBrief(
@@ -271,7 +265,7 @@ def delete_reading(
     r = session.exec(select(Reading).where(Reading.id == reading_id)).first()
     if not r:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="reading not found")
-    _require_family_owner(session, r.family_id, user.id)
+    require_family_owner(session, r.family_id, user.id)
 
     session.delete(r)
     session.commit()
@@ -285,7 +279,7 @@ def list_readings(
     session: Session = Depends(get_session),
     user: AuthUser = Depends(get_current_user),
 ) -> list[ReadingResponse]:
-    _require_family_owner(session, family_id, user.id)
+    require_family_owner(session, family_id, user.id)
 
     stmt = select(Reading).where(Reading.family_id == family_id)
     if member_id is not None:

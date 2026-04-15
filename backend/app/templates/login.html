@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 家庭阅读</title>
+  <link rel="stylesheet" href="/static/css/web.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <h1>家庭阅读</h1>
+    <p class="login-subtitle">开发态登录 — 输入你的 openid</p>
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/web/login" class="login-form">
+      <div class="form-group">
+        <label for="openid">OpenID</label>
+        <input type="text" id="openid" name="openid" placeholder="输入 openid" required autocomplete="off">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">登录</button>
+    </form>
+  </div>
+</body>
+</html>

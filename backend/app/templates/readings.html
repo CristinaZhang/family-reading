@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% set nav = "readings" %}
+
+{% block title %}阅读记录{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">阅读记录</h1>
+  <div class="filters">
+    <form method="get" action="/web/families/{{ family_id }}/readings" class="filter-form">
+      <select name="member_id">
+        <option value="">全部成员</option>
+        {% for m in members %}
+        <option value="{{ m.id }}" {% if selected_member == m.id %}selected{% endif %}>{{ m.display_name }}</option>
+        {% endfor %}
+      </select>
+      <select name="status_filter">
+        <option value="">全部状态</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if selected_status == s %}selected{% endif %}>{{ status_label(s) }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm">筛选</button>
+    </form>
+  </div>
+</div>
+
+<!-- 添加阅读记录表单 -->
+<details class="add-form">
+  <summary class="btn btn-primary">添加阅读记录</summary>
+  <form method="post" action="/web/families/{{ family_id }}/readings" class="form-inline">
+    <select name="member_id" required>
+      <option value="">选择成员</option>
+      {% for m in members %}
+      <option value="{{ m.id }}">{{ m.display_name }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="book_meta_id" placeholder="书籍ID（可从书籍页获取）" required>
+    <select name="status">
+      <option value="wishlist">想读</option>
+      <option value="reading" selected>在读</option>
+      <option value="finished">读完</option>
+      <option value="paused">搁置</option>
+      <option value="rereading">重读</option>
+    </select>
+    <input type="date" name="started_on">
+    <input type="text" name="note" placeholder="备注（可选）">
+    <button type="submit" class="btn btn-primary">提交</button>
+  </form>
+</details>
+
+<!-- 阅读记录列表 -->
+{% if readings %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>书名</th>
+      <th>成员</th>
+      <th>状态</th>
+      <th>进度</th>
+      <th>开始日期</th>
+      <th>结束日期</th>
+      <th>更新时间</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in readings %}
+    <tr>
+      <td>
+        {% if r.book_meta_id in book_map %}
+          {{ book_map[r.book_meta_id].title }}
+        {% else %}
+          未知
+        {% endif %}
+      </td>
+      <td>
+        {% if r.member_id in member_map %}
+          {{ member_map[r.member_id].display_name }}
+        {% endif %}
+      </td>
+      <td><span class="badge badge-{{ r.status.value }}">{{ status_label(r.status.value) }}</span></td>
+      <td>{{ r.progress_value }}</td>
+      <td>{{ r.started_on or '-' }}</td>
+      <td>{{ r.finished_on or '-' }}</td>
+      <td>{{ r.updated_at.strftime("%Y-%m-%d") }}</td>
+      <td class="actions">
+        {% if r.status.value != "finished" %}
+        <form method="post" action="/web/families/{{ family_id }}/readings/{{ r.id }}" style="display:inline">
+          <input type="hidden" name="_method" value="PATCH">
+          <input type="hidden" name="status_val" value="finished">
+          <button type="submit" class="btn btn-sm btn-success"
+                  hx-post="/web/families/{{ family_id }}/readings/{{ r.id }}"
+                  hx-vals='{"status_val": "finished"}'
+                  hx-redirect="true">标记读完</button>
+        </form>
+        {% endif %}
+        <button class="btn btn-sm btn-danger"
+                hx-delete="/web/families/{{ family_id }}/readings/{{ r.id }}"
+                hx-redirect="true"
+                hx-confirm="确认删除？">删除</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">暂无阅读记录</p>
+{% endif %}
+{% endblock %}
