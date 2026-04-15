@@ -43,22 +43,22 @@
       <th>选择</th>
       <th>书名</th>
       <th>作者</th>
-      <th>ISBN</th>
       <th>出版社</th>
+      <th>ISBN</th>
       <th>操作</th>
     </tr>
   </thead>
   <tbody>
     {% for b in books %}
-    <tr>
+    <tr id="book-row-{{ b.id }}">
       <td><input type="checkbox" class="book-cb" data-id="{{ b.id }}"></td>
-      <td class="book-title">{{ b.title }}</td>
-      <td>{{ b.authors_json|replace('[', '')|replace(']', '')|replace('"', '') }}</td>
-      <td class="isbn">{{ b.isbn13 or '-' }}</td>
-      <td>{{ b.publisher or '-' }}</td>
+      <td class="book-title" id="book-title-{{ b.id }}">{{ b.title }}</td>
+      <td id="book-authors-{{ b.id }}">{{ b.authors_json|replace('[', '')|replace(']', '')|replace('"', '') }}</td>
+      <td id="book-publisher-{{ b.id }}">{{ b.publisher or '-' }}</td>
+      <td class="isbn" id="book-isbn-{{ b.id }}">{{ b.isbn13 or '-' }}</td>
       <td class="actions">
-        <button class="btn btn-sm btn-danger"
-                onclick="deleteBook({{ family_id }}, {{ b.id }})">删除</button>
+        <button class="btn btn-sm btn-edit" onclick="editBook({{ family_id }}, {{ b.id }}, '{{ b.title }}', '{{ b.authors_json|replace("'", "\\'") }}', '{{ b.publisher or '' }}', '{{ b.isbn13 or '' }}')">编辑</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteBook({{ family_id }}, {{ b.id }})">删除</button>
       </td>
     </tr>
     {% endfor %}
@@ -67,6 +67,26 @@
 {% else %}
 <p class="empty">暂无书籍</p>
 {% endif %}
+
+<!-- 编辑书籍弹窗 -->
+<div id="edit-book-modal" class="modal" style="display:none;">
+  <div class="modal-backdrop" onclick="closeEditModal()"></div>
+  <div class="modal-content">
+    <h3 id="edit-book-title">编辑书籍</h3>
+    <form id="edit-book-form" onsubmit="saveBook(event)">
+      <input type="hidden" id="edit-book-id">
+      <input type="hidden" id="edit-family-id">
+      <label>书名 <input type="text" id="edit-title-input" required></label>
+      <label>作者（逗号分隔） <input type="text" id="edit-authors-input"></label>
+      <label>出版社 <input type="text" id="edit-publisher-input"></label>
+      <label>ISBN <input type="text" id="edit-isbn-input"></label>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">保存</button>
+        <button type="button" class="btn" onclick="closeEditModal()">取消</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -96,6 +116,34 @@ async function bulkDeleteBooks(familyId) {
     await fetch(`/web/families/${familyId}/books/${id}`, { method: 'DELETE' });
   }
   window.location.href = `/web/families/${familyId}/books`;
+}
+function editBook(familyId, bookId, title, authorsJson, publisher, isbn) {
+  document.getElementById('edit-book-id').value = bookId;
+  document.getElementById('edit-family-id').value = familyId;
+  document.getElementById('edit-title-input').value = title;
+  let authors = '';
+  try { authors = JSON.parse(authorsJson).join(', '); } catch(e) { authors = authorsJson; }
+  document.getElementById('edit-authors-input').value = authors;
+  document.getElementById('edit-publisher-input').value = publisher;
+  document.getElementById('edit-isbn-input').value = isbn;
+  document.getElementById('edit-book-modal').style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('edit-book-modal').style.display = 'none';
+}
+async function saveBook(e) {
+  e.preventDefault();
+  const bookId = document.getElementById('edit-book-id').value;
+  const familyId = document.getElementById('edit-family-id').value;
+  const fd = new FormData();
+  fd.append('title', document.getElementById('edit-title-input').value);
+  fd.append('authors', document.getElementById('edit-authors-input').value);
+  fd.append('publisher', document.getElementById('edit-publisher-input').value);
+  fd.append('isbn', document.getElementById('edit-isbn-input').value);
+  const resp = await fetch(`/web/families/${familyId}/books/${bookId}`, {
+    method: 'PATCH', body: fd
+  });
+  if (resp.ok || resp.status === 302) window.location.reload();
 }
 </script>
 {% endblock %}

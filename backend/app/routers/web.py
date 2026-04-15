@@ -468,6 +468,40 @@ def create_books_batch(
     return _htmx_redirect(request, f"/web/families/{family_id}/books")
 
 
+@router.patch("/web/families/{family_id}/books/{book_id}")
+def patch_book_htmx(
+    request: Request,
+    family_id: int,
+    book_id: int,
+    title: Optional[str] = Form(default=None),
+    authors: Optional[str] = Form(default=None),
+    publisher: Optional[str] = Form(default=None),
+    isbn: Optional[str] = Form(default=None),
+    session: Session = Depends(get_session),
+) -> HTMLResponse:
+    user = require_web_user(request, session)
+    require_family_owner(session, family_id, user.id)
+
+    bm = session.exec(select(BookMeta).where(BookMeta.id == book_id)).first()
+    if not bm:
+        raise HTTPException(status_code=404, detail="not found")
+
+    if title is not None:
+        bm.title = title.strip() or bm.title
+    if authors is not None:
+        author_list = [a.strip() for a in authors.split(",") if a.strip()] if authors else [json.loads(bm.authors_json)[0] if bm.authors_json else "未知"]
+        bm.authors_json = json.dumps(author_list, ensure_ascii=False)
+    if publisher is not None:
+        bm.publisher = publisher.strip() or None
+    if isbn is not None:
+        bm.isbn13 = isbn.strip() or None
+
+    session.add(bm)
+    session.commit()
+
+    return _htmx_redirect(request, f"/web/families/{family_id}/books")
+
+
 @router.delete("/web/families/{family_id}/books/{book_id}")
 def delete_book_htmx(
     request: Request,
