@@ -332,7 +332,7 @@ def create_reading_htmx(
     session.commit()
     session.refresh(r)
 
-    return RedirectResponse(url=f"/web/families/{family_id}/readings")
+    return RedirectResponse(url=f"/web/families/{family_id}/readings", status_code=status.HTTP_302_FOUND)
 
 
 @router.patch("/web/families/{family_id}/readings/{reading_id}")
@@ -363,7 +363,7 @@ def patch_reading_htmx(
     session.add(r)
     session.commit()
 
-    return RedirectResponse(url=f"/web/families/{family_id}/readings")
+    return RedirectResponse(url=f"/web/families/{family_id}/readings", status_code=status.HTTP_302_FOUND)
 
 
 @router.delete("/web/families/{family_id}/readings/{reading_id}")
@@ -382,7 +382,7 @@ def delete_reading_htmx(
     session.delete(r)
     session.commit()
 
-    return RedirectResponse(url=f"/web/families/{family_id}/readings")
+    return RedirectResponse(url=f"/web/families/{family_id}/readings", status_code=status.HTTP_302_FOUND)
 
 
 @router.get("/web/families/{family_id}/books")
@@ -431,7 +431,7 @@ def create_book_htmx(
     session.commit()
     session.refresh(bm)
 
-    return RedirectResponse(url=f"/web/families/{family_id}/books")
+    return RedirectResponse(url=f"/web/families/{family_id}/books", status_code=status.HTTP_302_FOUND)
 
 
 @router.delete("/web/families/{family_id}/books/{book_id}")
@@ -450,7 +450,7 @@ def delete_book_htmx(
     session.delete(bm)
     session.commit()
 
-    return RedirectResponse(url=f"/web/families/{family_id}/books")
+    return RedirectResponse(url=f"/web/families/{family_id}/books", status_code=status.HTTP_302_FOUND)
 
 
 @router.get("/web/families/{family_id}/members")
@@ -487,14 +487,14 @@ def create_member_htmx(
 
     display_name = display_name.strip()
     if not display_name:
-        return RedirectResponse(url=f"/web/families/{family_id}/members")
+        return RedirectResponse(url=f"/web/families/{family_id}/members", status_code=status.HTTP_302_FOUND)
 
     m = FamilyMember(family_id=family_id, display_name=display_name)
     session.add(m)
     session.commit()
     session.refresh(m)
 
-    return RedirectResponse(url=f"/web/families/{family_id}/members")
+    return RedirectResponse(url=f"/web/families/{family_id}/members", status_code=status.HTTP_302_FOUND)
 
 
 # --- Export endpoints ---
