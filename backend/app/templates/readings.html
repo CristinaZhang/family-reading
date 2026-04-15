@@ -35,8 +35,13 @@
       <option value="{{ m.id }}">{{ m.display_name }}</option>
       {% endfor %}
     </select>
-    <input type="text" name="book_meta_id" placeholder="书籍ID（可从书籍页获取）" required>
-    <select name="status">
+    <select name="book_meta_id" required>
+      <option value="">选择书籍</option>
+      {% for b in book_list %}
+      <option value="{{ b.id }}">{{ b.title }}</option>
+      {% endfor %}
+    </select>
+    <select name="reading_status">
       <option value="wishlist">想读</option>
       <option value="reading" selected>在读</option>
       <option value="finished">读完</option>
@@ -86,19 +91,11 @@
       <td>{{ r.updated_at.strftime("%Y-%m-%d") }}</td>
       <td class="actions">
         {% if r.status.value != "finished" %}
-        <form method="post" action="/web/families/{{ family_id }}/readings/{{ r.id }}" style="display:inline">
-          <input type="hidden" name="_method" value="PATCH">
-          <input type="hidden" name="status_val" value="finished">
-          <button type="submit" class="btn btn-sm btn-success"
-                  hx-post="/web/families/{{ family_id }}/readings/{{ r.id }}"
-                  hx-vals='{"status_val": "finished"}'
-                  hx-redirect="true">标记读完</button>
-        </form>
+        <button class="btn btn-sm btn-success"
+                onclick="finishReading({{ family_id }}, {{ r.id }})">标记读完</button>
         {% endif %}
         <button class="btn btn-sm btn-danger"
-                hx-delete="/web/families/{{ family_id }}/readings/{{ r.id }}"
-                hx-redirect="true"
-                hx-confirm="确认删除？">删除</button>
+                onclick="deleteReading({{ family_id }}, {{ r.id }})">删除</button>
       </td>
     </tr>
     {% endfor %}
@@ -107,4 +104,21 @@
 {% else %}
 <p class="empty">暂无阅读记录</p>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function finishReading(familyId, readingId) {
+  if (!confirm('标记为读完？')) return;
+  const fd = new FormData();
+  fd.append('status_val', 'finished');
+  fetch(`/web/families/${familyId}/readings/${readingId}`, { method: 'PATCH', body: fd })
+    .then(r => { if (r.ok) window.location.reload(); });
+}
+function deleteReading(familyId, readingId) {
+  if (!confirm('确认删除？')) return;
+  fetch(`/web/families/${familyId}/readings/${readingId}`, { method: 'DELETE' })
+    .then(r => { if (r.ok) window.location.reload(); });
+}
+</script>
 {% endblock %}

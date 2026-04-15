@@ -292,8 +292,9 @@ def readings_page(
     members = session.exec(select(FamilyMember).where(FamilyMember.family_id == family_id)).all()
     member_map = {m.id: m for m in members}
     book_ids = {r.book_meta_id for r in readings}
-    books = session.exec(select(BookMeta).where(BookMeta.id.in_(book_ids))).all()  # type: ignore[arg-type]
-    book_map = {b.id: b for b in books}
+    # Fetch all books (for select) + the ones in readings
+    all_books = session.exec(select(BookMeta).order_by(BookMeta.title)).all()
+    book_map = {b.id: b for b in all_books}
 
     return _template_response(
         request,
@@ -305,6 +306,7 @@ def readings_page(
             "members": members,
             "member_map": member_map,
             "book_map": book_map,
+            "book_list": all_books,
             "selected_member": member_id,
             "selected_status": status_filter,
             "statuses": [s.value for s in ReadingStatus],
@@ -437,6 +439,31 @@ def create_book_htmx(
     session.add(bm)
     session.commit()
     session.refresh(bm)
+
+    return _htmx_redirect(request, f"/web/families/{family_id}/books")
+
+
+@router.post("/web/families/{family_id}/books/batch")
+def create_books_batch(
+    request: Request,
+    family_id: int,
+    batch_input: str = Form(),
+    session: Session = Depends(get_session),
+) -> HTMLResponse:
+    user = require_web_user(request, session)
+    require_family_owner(session, family_id, user.id)
+
+    lines = [l.strip() for l in batch_input.strip().splitlines() if l.strip()]
+    for line in lines:
+        parts = [p.strip() for p in line.split(",", 1)]
+        title = parts[0]
+        author = parts[1] if len(parts) > 1 and parts[1] else "未知"
+        bm = BookMeta(
+            title=title,
+            authors_json=json.dumps([author], ensure_ascii=False),
+        )
+        session.add(bm)
+    session.commit()
 
     return _htmx_redirect(request, f"/web/families/{family_id}/books")
 
