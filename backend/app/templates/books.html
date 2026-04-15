@@ -19,10 +19,15 @@
 
 <!-- 书籍列表 -->
 {% if books %}
+<div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+  <label><input type="checkbox" id="select-all-books" onchange="toggleAllBooks(this)"> 全选</label>
+  <button type="button" class="btn btn-danger btn-small" id="bulk-book-delete-btn" disabled
+          onclick="bulkDeleteBooks({{ family_id }})">批量删除</button>
+</div>
 <table class="table">
   <thead>
     <tr>
-      <th>封面</th>
+      <th>选择</th>
       <th>书名</th>
       <th>作者</th>
       <th>ISBN</th>
@@ -33,22 +38,15 @@
   <tbody>
     {% for b in books %}
     <tr>
-      <td class="cover-cell">
-        {% if b.cover_url %}
-        <img src="{{ b.cover_url }}" alt="" class="book-cover">
-        {% else %}
-        <div class="book-cover-placeholder">📖</div>
-        {% endif %}
-      </td>
+      <td><input type="checkbox" class="book-cb" data-id="{{ b.id }}"></td>
       <td class="book-title">{{ b.title }}</td>
       <td>{{ b.authors_json|replace('[', '')|replace(']', '')|replace('"', '') }}</td>
       <td class="isbn">{{ b.isbn13 or '-' }}</td>
       <td>{{ b.publisher or '-' }}</td>
       <td class="actions">
         <button class="btn btn-sm btn-danger"
-                hx-delete="/web/families/{{ family_id }}/books/{{ b.id }}"
-                hx-redirect="true"
-                hx-confirm="确认删除？">删除</button>
+                onclick="deleteBook({{ family_id }}, {{ b.id }})"
+                confirm="确认删除？">删除</button>
       </td>
     </tr>
     {% endfor %}
@@ -57,4 +55,35 @@
 {% else %}
 <p class="empty">暂无书籍</p>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAllBooks(cb) {
+  document.querySelectorAll('.book-cb').forEach(c => c.checked = cb.checked);
+  updateBookBulkBtn();
+}
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('book-cb')) updateBookBulkBtn();
+});
+function updateBookBulkBtn() {
+  const n = document.querySelectorAll('.book-cb:checked').length;
+  const btn = document.getElementById('bulk-book-delete-btn');
+  if (btn) { btn.disabled = n === 0; btn.textContent = '批量删除 (' + n + ')'; }
+}
+function deleteBook(familyId, bookId) {
+  if (!confirm('确认删除？')) return;
+  fetch(`/web/families/${familyId}/books/${bookId}`, { method: 'DELETE' })
+    .then(r => { if (r.ok) window.location.reload(); });
+}
+async function bulkDeleteBooks(familyId) {
+  const ids = [...document.querySelectorAll('.book-cb:checked')].map(c => c.dataset.id);
+  if (!ids.length) return;
+  if (!confirm('确定删除选中的 ' + ids.length + ' 本书吗？')) return;
+  for (const id of ids) {
+    await fetch(`/web/families/${familyId}/books/${id}`, { method: 'DELETE' });
+  }
+  window.location.href = `/web/families/${familyId}/books`;
+}
+</script>
 {% endblock %}

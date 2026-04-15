@@ -115,6 +115,13 @@ def _template_response(request: Request, name: str, context: dict | None = None,
     return templates.TemplateResponse(request=request, name=name, context=context, **kwargs)
 
 
+def _htmx_redirect(request: Request, url: str) -> Response:
+    """Smart redirect: 200+HX-Redirect for HTMX, 302 for browser forms."""
+    if request.headers.get("HX-Request"):
+        return Response(status_code=200, headers={"HX-Redirect": url})
+    return RedirectResponse(url=url, status_code=status.HTTP_302_FOUND)
+
+
 # --- Page routes ---
 
 @router.get("/web/login")
@@ -134,7 +141,7 @@ def login_submit(
     user = session.exec(select(User).where(User.openid == openid)).first()
     if not user:
         return _template_response(request, "login.html", {"error": "用户不存在，请确认 ENABLE_DEV_LOGIN=1"})
-    response = RedirectResponse(url="/web/", status_code=status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse(url="/web/", status_code=status.HTTP_302_FOUND)
     _set_session(response, user.id)
     return response
 
@@ -177,7 +184,7 @@ def create_family_htmx(
     # Auto-create a default member "我"
     session.add(FamilyMember(family_id=fam.id, display_name="我"))
     session.commit()
-    return RedirectResponse(url=f"/web/families/{fam.id}/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{fam.id}/dashboard")
 
 
 @router.get("/web/families/{family_id}/dashboard")
@@ -332,7 +339,7 @@ def create_reading_htmx(
     session.commit()
     session.refresh(r)
 
-    return RedirectResponse(url=f"/web/families/{family_id}/readings", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{family_id}/readings")
 
 
 @router.patch("/web/families/{family_id}/readings/{reading_id}")
@@ -363,7 +370,7 @@ def patch_reading_htmx(
     session.add(r)
     session.commit()
 
-    return RedirectResponse(url=f"/web/families/{family_id}/readings", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{family_id}/readings")
 
 
 @router.delete("/web/families/{family_id}/readings/{reading_id}")
@@ -382,7 +389,7 @@ def delete_reading_htmx(
     session.delete(r)
     session.commit()
 
-    return RedirectResponse(url=f"/web/families/{family_id}/readings", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{family_id}/readings")
 
 
 @router.get("/web/families/{family_id}/books")
@@ -431,7 +438,7 @@ def create_book_htmx(
     session.commit()
     session.refresh(bm)
 
-    return RedirectResponse(url=f"/web/families/{family_id}/books", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{family_id}/books")
 
 
 @router.delete("/web/families/{family_id}/books/{book_id}")
@@ -450,7 +457,7 @@ def delete_book_htmx(
     session.delete(bm)
     session.commit()
 
-    return RedirectResponse(url=f"/web/families/{family_id}/books", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{family_id}/books")
 
 
 @router.get("/web/families/{family_id}/members")
@@ -487,14 +494,14 @@ def create_member_htmx(
 
     display_name = display_name.strip()
     if not display_name:
-        return RedirectResponse(url=f"/web/families/{family_id}/members", status_code=status.HTTP_303_SEE_OTHER)
+        return _htmx_redirect(request, f"/web/families/{family_id}/members")
 
     m = FamilyMember(family_id=family_id, display_name=display_name)
     session.add(m)
     session.commit()
     session.refresh(m)
 
-    return RedirectResponse(url=f"/web/families/{family_id}/members", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{family_id}/members")
 
 
 @router.delete("/web/families/{family_id}/members/{member_id}")
@@ -513,7 +520,7 @@ def delete_member_htmx(
     session.delete(m)
     session.commit()
 
-    return RedirectResponse(url=f"/web/families/{family_id}/members", status_code=status.HTTP_303_SEE_OTHER)
+    return _htmx_redirect(request, f"/web/families/{family_id}/members")
 
 
 # --- Export endpoints ---
