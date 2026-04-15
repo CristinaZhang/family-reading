@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data
+backend/data/
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local config (may contain secrets)
+backend/.env
+backend/local.env
+
+# Node modules
+node_modules/
+
+# CI/CD
+.github/
